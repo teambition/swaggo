@@ -99,7 +99,7 @@ type Schema struct {
 	Description string               `json:"description,omitempty" yaml:"description,omitempty"`
 	Required    []string             `json:"required,omitempty" yaml:"required,omitempty"`
 	Type        string               `json:"type,omitempty" yaml:"type,omitempty"`
-	AllOf       *Schema              `json:"allOf,omitempty" yaml:"type,omitempty"`
+	AllOf       *Schema              `json:"allOf,omitempty" yaml:"allOf,omitempty"`
 	Items       *Schema              `json:"items,omitempty" yaml:"items,omitempty"`
 	Properties  map[string]Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
 }

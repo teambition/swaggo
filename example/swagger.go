@@ -3,10 +3,10 @@
 // @Description Swagger Example API
 // @Host http://127.0.0.1:3000
 // @BasePath /api
-// @Contact xxxxx@gmail.com
-// @TermsOfServiceUrl http://yvasiyarov.com/
-// @License BSD
-// @LicenseUrl http://yvasiyarov.com/
+// @Contact swagger@teambition.com
+// @TermsOfServiceUrl http://teambition.com/
+// @License Apache
+// @LicenseUrl http://teambition.com/
 package main
 
 import (

@@ -8,13 +8,12 @@ import (
 	"unicode"
 
 	"github.com/teambition/swaggo/swagger"
-	"github.com/teambition/swaggo/utils"
 )
 
 type controller struct {
 	*ast.TypeSpec
 	doc     *ast.CommentGroup
-	r       *Resource
+	r       *resource
 	name    string
 	methods []*method
 }
@@ -24,10 +23,13 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 	tag := swagger.Tag{}
 	for _, c := range strings.Split(ctrl.doc.Text(), "\n") {
 		switch {
-		case strings.HasPrefix(c, ctrlName):
-			cName = strings.TrimSpace(c[len(ctrlName):])
-		case strings.HasPrefix(c, ctrlDesc):
-			tag.Description = strings.TrimSpace(c[len(ctrlDesc):])
+		case tagTrimPrefixAndSpace(&c, ctrlName):
+			cName = c
+		case tagTrimPrefixAndSpace(&c, ctrlDesc):
+			tag.Description = c
+		case tagTrimPrefixAndSpace(&c, ctrlPrivate):
+			// private controller
+			return
 		}
 	}
 	if cName == "" {
@@ -41,29 +43,35 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 		opt := swagger.Operation{
 			Responses: make(map[string]swagger.Response),
 		}
+		private := false
 		for _, c := range strings.Split(method.Doc.Text(), "\n") {
 			switch {
-			case strings.HasPrefix(c, methodTitle):
-				opt.OperationID = cName + "." + strings.TrimSpace(c[len(methodTitle):])
-			case strings.HasPrefix(c, methodDesc):
-				opt.Description = strings.TrimSpace(c[len(methodDesc):])
-			case strings.HasPrefix(c, methodSummary):
-				opt.Summary = strings.TrimSpace(c[len(methodSummary):])
-			case strings.HasPrefix(c, methodSuccess):
-				ss := strings.TrimSpace(c[len(methodSuccess):])
+			case tagTrimPrefixAndSpace(&c, methodPrivate):
+				private = true
+			case tagTrimPrefixAndSpace(&c, methodTitle):
+				opt.OperationID = cName + "." + c
+			case tagTrimPrefixAndSpace(&c, methodDesc):
+				opt.Description = c
+			case tagTrimPrefixAndSpace(&c, methodSummary):
+				if opt.Summary != "" {
+					opt.Summary = opt.Summary + "\n" + c
+				} else {
+					opt.Summary = c
+				}
+			case tagTrimPrefixAndSpace(&c, methodSuccess):
 				rs := swagger.Response{}
 				rs.Schema = &swagger.Schema{}
-				respCode, pos := peekNextSplitString(ss)
-				ss = strings.TrimSpace(ss[pos:])
-				schemaName, pos := peekNextSplitString(ss)
-				rs.Description = strings.TrimSpace(ss[pos:])
-				if err = ctrl.r.parse(s, rs.Schema, method.filename, schemaName); err != nil {
+				respCode, pos := peekNextSplitString(c)
+				c = strings.TrimSpace(c[pos:])
+				schemaName, pos := peekNextSplitString(c)
+				rs.Description = strings.TrimSpace(c[pos:])
+				if err = ctrl.r.parseSchema(s, rs.Schema, method.filename, schemaName); err != nil {
 					return
 				}
 				opt.Responses[respCode] = rs
-			case strings.HasPrefix(c, methodParam):
+			case tagTrimPrefixAndSpace(&c, methodParam):
 				para := swagger.Parameter{}
-				p := getparams(strings.TrimSpace(c[len(methodParam):]))
+				p := getparams(c)
 				if len(p) < 4 {
 					err = fmt.Errorf("(%s.%s) comments %s shuold have 4 params at least", cName, method.name)
 					return
@@ -86,7 +94,7 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 				}
 				para.In = p[1]
 				m := &swagger.Schema{}
-				if err = ctrl.r.parse(s, m, method.filename, p[2]); err != nil {
+				if err = ctrl.r.parseSchema(s, m, method.filename, p[2]); err != nil {
 					return
 				}
 				para.Schema = m
@@ -95,22 +103,21 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 					para.Required, _ = strconv.ParseBool(p[3])
 					para.Description = strings.Trim(p[4], `" `)
 				case 6:
-					para.Default, _ = utils.Str2RealType(p[3], para.Type)
+					para.Default, _ = str2RealType(p[3], para.Type)
 					para.Required, _ = strconv.ParseBool(p[4])
 					para.Description = strings.Trim(p[5], `" `)
 				default:
 					para.Description = strings.Trim(p[3], `" `)
 				}
 				opt.Parameters = append(opt.Parameters, para)
-			case strings.HasPrefix(c, methodFailure):
+			case tagTrimPrefixAndSpace(&c, methodFailure):
 				rs := swagger.Response{}
-				st := strings.TrimSpace(c[len(methodFailure):])
 				var cd []rune
 				var start bool
-				for i, s := range st {
+				for i, s := range c {
 					if unicode.IsSpace(s) {
 						if start {
-							rs.Description = strings.TrimSpace(st[i+1:])
+							rs.Description = strings.TrimSpace(c[i+1:])
 							break
 						} else {
 							continue
@@ -120,39 +127,37 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 					cd = append(cd, s)
 				}
 				opt.Responses[string(cd)] = rs
-			case strings.HasPrefix(c, methodDeprecated):
-				opt.Deprecated, _ = strconv.ParseBool(strings.TrimSpace(c[len(methodDeprecated):]))
-			case strings.HasPrefix(c, methodAccept):
-				accepts := strings.Split(strings.TrimSpace(strings.TrimSpace(c[len(methodAccept):])), ",")
-				for _, a := range accepts {
+			case tagTrimPrefixAndSpace(&c, methodDeprecated):
+				opt.Deprecated, _ = strconv.ParseBool(c)
+			case tagTrimPrefixAndSpace(&c, methodAccept):
+				for _, a := range strings.Split(c, ",") {
 					switch a {
-					case json:
-						opt.Consumes = append(opt.Consumes, ajson)
-					case xml:
-						opt.Consumes = append(opt.Consumes, axml)
-					case plain:
-						opt.Consumes = append(opt.Consumes, tplain)
-					case html:
-						opt.Consumes = append(opt.Consumes, thtml)
+					case jsonType:
+						opt.Consumes = append(opt.Consumes, appJson)
+					case xmlType:
+						opt.Consumes = append(opt.Consumes, appXml)
+					case plainType:
+						opt.Consumes = append(opt.Consumes, textPlain)
+					case htmlType:
+						opt.Consumes = append(opt.Consumes, textHtml)
 					}
 				}
-			case strings.HasPrefix(c, methodProduce):
-				produces := strings.Split(strings.TrimSpace(strings.TrimSpace(c[len(methodProduce):])), ",")
-				for _, p := range produces {
+			case tagTrimPrefixAndSpace(&c, methodProduce):
+				for _, p := range strings.Split(c, ",") {
 					switch p {
-					case json:
-						opt.Produces = append(opt.Produces, ajson)
-					case xml:
-						opt.Produces = append(opt.Produces, axml)
-					case plain:
-						opt.Produces = append(opt.Produces, tplain)
-					case html:
-						opt.Produces = append(opt.Produces, thtml)
+					case jsonType:
+						opt.Produces = append(opt.Produces, appJson)
+					case xmlType:
+						opt.Produces = append(opt.Produces, appXml)
+					case plainType:
+						opt.Produces = append(opt.Produces, textPlain)
+					case htmlType:
+						opt.Produces = append(opt.Produces, textHtml)
 					}
 				}
-			case strings.HasPrefix(c, methodRouter):
+			case tagTrimPrefixAndSpace(&c, methodRouter):
 				// @Router / [post]
-				elements := strings.Split(strings.TrimSpace(c[len(methodRouter):]), " ")
+				elements := strings.Split(c, " ")
 				if len(elements) == 0 {
 					return fmt.Errorf("method(%s) should has Router information", method.name)
 				}
@@ -165,7 +170,7 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 				}
 			}
 		}
-		if routerPath != "" {
+		if routerPath != "" && !private {
 			if s.Paths == nil {
 				s.Paths = map[string]*swagger.Item{}
 			}
@@ -195,59 +200,4 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 		}
 	}
 	return
-}
-
-func isDocComments(comments *ast.CommentGroup) bool {
-	for _, c := range strings.Split(comments.Text(), "\n") {
-		if strings.HasPrefix(c, docPrefix) {
-			return true
-		}
-	}
-	return false
-}
-
-func peekNextSplitString(ss string) (s string, spacePos int) {
-	spacePos = strings.IndexFunc(ss, unicode.IsSpace)
-	if spacePos < 0 {
-		s = ss
-		spacePos = len(ss)
-	} else {
-		s = strings.TrimSpace(ss[:spacePos])
-	}
-	return
-}
-
-// analisys params return []string
-// @Param	query		form	 string	true		"The email for login"
-// [query form string true "The email for login"]
-func getparams(str string) []string {
-	var s []rune
-	var j int
-	var start bool
-	var r []string
-	var quoted int8
-	for _, c := range []rune(str) {
-		if unicode.IsSpace(c) && quoted == 0 {
-			if !start {
-				continue
-			} else {
-				start = false
-				j++
-				r = append(r, string(s))
-				s = make([]rune, 0)
-				continue
-			}
-		}
-
-		start = true
-		if c == '"' {
-			quoted ^= 1
-			continue
-		}
-		s = append(s, c)
-	}
-	if len(s) > 0 {
-		r = append(r, string(s))
-	}
-	return r
 }

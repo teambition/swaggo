@@ -8,20 +8,21 @@ import (
 	"github.com/teambition/swaggo/swagger"
 )
 
-// Resource api resource
-type Resource struct {
+// resource api resource
+type resource struct {
 	*pkg
 	// maybe one resource has several controller
 	controllers map[string]*controller // ctrl name -> ctrl
 }
 
-func NewResoucre(importPath string, filter func(string) bool) (*Resource, error) {
-	p, err := newPackage("_", importPath, filter)
+// newResoucre an api definition
+func newResoucre(importPath string) (*resource, error) {
+	p, err := newPackage("_", importPath)
 	if err != nil {
 		return nil, err
 	}
 
-	r := &Resource{
+	r := &resource{
 		pkg:         p,
 		controllers: map[string]*controller{},
 	}
@@ -85,7 +86,8 @@ func NewResoucre(importPath string, filter func(string) bool) (*Resource, error)
 	return r, nil
 }
 
-func (r *Resource) Run(s *swagger.Swagger) error {
+// run gernerate swagger doc
+func (r *resource) run(s *swagger.Swagger) error {
 	// parse controllers
 	for _, ctrl := range r.controllers {
 		if err := ctrl.parse(s); err != nil {

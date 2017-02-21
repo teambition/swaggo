@@ -1,5 +1,9 @@
 package swagger
 
+func NewV2() *Swagger {
+	return &Swagger{SwaggerVersion: "2.0"}
+}
+
 // Swagger 2.0
 // Swagger list the resource
 type Swagger struct {

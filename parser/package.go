@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/teambition/swaggo/swagger"
-	"github.com/teambition/swaggo/utils"
 )
 
 type pkg struct {
@@ -25,13 +24,11 @@ type pkg struct {
 	// model name -> model
 	// cache of model struct
 	models []*model
-	// filter the import path
-	filter func(string) bool
 }
 
 // newPackage
 // filter used for imported packages
-func newPackage(localName, importPath string, filter func(string) bool) (p *pkg, err error) {
+func newPackage(localName, importPath string) (p *pkg, err error) {
 	goPaths := os.Getenv("GOPATH")
 	if goPaths == "" {
 		err = fmt.Errorf("GOPATH environment variable is not set or empty")
@@ -41,7 +38,7 @@ func newPackage(localName, importPath string, filter func(string) bool) (p *pkg,
 	absPath := ""
 	for _, goPath := range filepath.SplitList(goPaths) {
 		wg, _ := filepath.EvalSymlinks(filepath.Join(goPath, "src", importPath))
-		if utils.FileExists(wg) {
+		if fileExists(wg) {
 			absPath = wg
 		}
 	}
@@ -66,18 +63,17 @@ func newPackage(localName, importPath string, filter func(string) bool) (p *pkg,
 			absPath:    absPath,
 			importPkgs: map[string][]*pkg{},
 			models:     []*model{},
-			filter:     filter,
 		}, nil
 	}
 	return
 }
 
-// parse parse schema in the file
-func (p *pkg) parse(s *swagger.Swagger, m *swagger.Schema, filename, schema string) (err error) {
+// parseSchema parse schema in the file
+func (p *pkg) parseSchema(s *swagger.Swagger, m *swagger.Schema, filename, schema string) (err error) {
 	if strings.HasPrefix(schema, "[]") {
 		m.Type = "array"
 		m.Items = &swagger.Schema{}
-		return p.parse(s, m.Items, filename, schema[2:])
+		return p.parseSchema(s, m.Items, filename, schema[2:])
 	}
 	// file body
 	if schema == "file" {
@@ -111,7 +107,7 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 	pkgs := []*pkg{}
 	for _, im := range f.Imports {
 		importPath := strings.Trim(im.Path.Value, "\"")
-		if p.filter == nil || p.filter(importPath) {
+		if systemPackageFilter(importPath) {
 			// alias name
 			localName := ""
 			if im.Name != nil {
@@ -132,7 +128,7 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 			default:
 				// import m "lib/math"         m.Sin
 			}
-			if importPkg, err := newPackage(localName, importPath, p.filter); err != nil {
+			if importPkg, err := newPackage(localName, importPath); err != nil {
 				return nil, err
 			} else {
 				pkgs = append(pkgs, importPkg)
@@ -296,86 +292,77 @@ func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key strin
 		return
 	}
 
-	var iterStruct func(*ast.StructType, *swagger.Schema) error
-	iterStruct = func(st *ast.StructType, m *swagger.Schema) (err error) {
-		for _, f := range st.Fields.List {
-			isInherit := false
-			mp := swagger.Propertie{}
-
-			innerType, ref := "", ""
-			if innerType, ref, err = iterField(f.Type, &mp); err != nil {
-				return
-			}
-			if innerType == "" && ref == "" {
-				err = errors.New("must have a inner type or a decl type")
-				return
-			}
-			if ref != "" {
-				if f.Names == nil {
-					// anonymous member
-					// type A struct {
-					//     B
-					// }
-					if isInherit {
-						// type A struct {
-						//     B
-						//     C
-						// }
-						err = errors.New("can't inherit form other model twice")
-						return
-					}
-					isInherit = true
-					m.AllOf = &swagger.Schema{Ref: ref}
-					continue
-				}
-				mp.Ref = "#/definitions/" + ref
-			}
-			name := f.Names[0].Name
-			// check if it has tags
-			if f.Tag == nil {
-				m.Properties[name] = mp
-				continue
-			}
-			// parse tag for name
-			stag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
-			// doc tag include
-			// if the filed is a integer we can set: default:`123`
-			defautlValue := stag.Get("default")
-			if defautlValue != "" {
-				if mp.Default, err = utils.Str2RealType(defautlValue, innerType); err != nil {
-					return
-				}
-			}
-
-			tagValues := strings.Split(stag.Get("json"), ",")
-			// dont add property if json tag first value is "-"
-			if len(tagValues) == 0 || tagValues[0] != "-" {
-				// set property name to the left most json tag value only if is not empty
-				if len(tagValues) > 0 && tagValues[0] != "" {
-					name = tagValues[0]
-				}
-
-				if required := stag.Get("required"); required != "" {
-					m.Required = append(m.Required, name)
-				}
-				if desc := stag.Get("desc"); desc != "" {
-					mp.Description = desc
-				}
-				m.Properties[name] = mp
-			}
-		}
-		return
-	}
-
 	st, ok := model.Type.(*ast.StructType)
 	if !ok {
 		err = fmt.Errorf("unsupport type(%s) only support struct", schema)
 		return
 	}
-
 	m := swagger.Schema{Title: modelName, Type: "object", Properties: map[string]swagger.Propertie{}}
-	if err = iterStruct(st, &m); err != nil {
-		return
+	for _, f := range st.Fields.List {
+		isInherit := false
+		mp := swagger.Propertie{}
+
+		innerType, ref := "", ""
+		if innerType, ref, err = iterField(f.Type, &mp); err != nil {
+			return
+		}
+		if innerType == "" && ref == "" {
+			err = errors.New("must have a inner type or a decl type")
+			return
+		}
+		if ref != "" {
+			if f.Names == nil {
+				// anonymous member
+				// type A struct {
+				//     B
+				// }
+				if isInherit {
+					// type A struct {
+					//     B
+					//     C
+					// }
+					err = errors.New("can't inherit form other model twice")
+					return
+				}
+				isInherit = true
+				m.AllOf = &swagger.Schema{Ref: ref}
+				continue
+			}
+			mp.Ref = "#/definitions/" + ref
+		}
+		name := f.Names[0].Name
+		// check if it has tags
+		if f.Tag == nil {
+			m.Properties[name] = mp
+			continue
+		}
+		// parse tag for name
+		stag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
+		// doc tag include
+		// if the filed is a integer we can set: default:`123`
+		defautlValue := stag.Get("default")
+		if defautlValue != "" {
+			if mp.Default, err = str2RealType(defautlValue, innerType); err != nil {
+				return
+			}
+		}
+
+		tagValues := strings.Split(stag.Get("json"), ",")
+		// dont add property if json tag first value is "-"
+		if len(tagValues) == 0 || tagValues[0] != "-" {
+			// set property name to the left most json tag value only if is not empty
+			if len(tagValues) > 0 && tagValues[0] != "" {
+				name = tagValues[0]
+			}
+
+			if required := stag.Get("required"); required != "" {
+				m.Required = append(m.Required, name)
+			}
+			if desc := stag.Get("desc"); desc != "" {
+				mp.Description = desc
+			}
+			m.Properties[name] = mp
+		}
 	}
 
 	s.Definitions[key] = m

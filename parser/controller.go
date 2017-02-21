@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/teambition/swaggo/swagger"
 )
@@ -42,6 +41,7 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 		var routerPath, HTTPMethod string
 		opt := swagger.Operation{
 			Responses: make(map[string]swagger.Response),
+			Tags:      []string{tag.Name},
 		}
 		private := false
 		for _, c := range strings.Split(method.Doc.Text(), "\n") {
@@ -51,24 +51,17 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 			case tagTrimPrefixAndSpace(&c, methodTitle):
 				opt.OperationID = cName + "." + c
 			case tagTrimPrefixAndSpace(&c, methodDesc):
-				opt.Description = c
+				if opt.Description != "" {
+					opt.Description += "\n" + c
+				} else {
+					opt.Description = c
+				}
 			case tagTrimPrefixAndSpace(&c, methodSummary):
 				if opt.Summary != "" {
-					opt.Summary = opt.Summary + "\n" + c
+					opt.Summary += "\n" + c
 				} else {
 					opt.Summary = c
 				}
-			case tagTrimPrefixAndSpace(&c, methodSuccess):
-				rs := swagger.Response{}
-				rs.Schema = &swagger.Schema{}
-				respCode, pos := peekNextSplitString(c)
-				c = strings.TrimSpace(c[pos:])
-				schemaName, pos := peekNextSplitString(c)
-				rs.Description = strings.TrimSpace(c[pos:])
-				if err = ctrl.r.parseSchema(s, rs.Schema, method.filename, schemaName); err != nil {
-					return
-				}
-				opt.Responses[respCode] = rs
 			case tagTrimPrefixAndSpace(&c, methodParam):
 				para := swagger.Parameter{}
 				p := getparams(c)
@@ -110,23 +103,17 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 					para.Description = strings.Trim(p[3], `" `)
 				}
 				opt.Parameters = append(opt.Parameters, para)
-			case tagTrimPrefixAndSpace(&c, methodFailure):
+			case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
 				rs := swagger.Response{}
-				var cd []rune
-				var start bool
-				for i, s := range c {
-					if unicode.IsSpace(s) {
-						if start {
-							rs.Description = strings.TrimSpace(c[i+1:])
-							break
-						} else {
-							continue
-						}
-					}
-					start = true
-					cd = append(cd, s)
+				rs.Schema = &swagger.Schema{}
+				respCode, pos := peekNextSplitString(c)
+				c = strings.TrimSpace(c[pos:])
+				schemaName, pos := peekNextSplitString(c)
+				rs.Description = strings.Trim(c[pos:], `" `)
+				if err = ctrl.r.parseSchema(s, rs.Schema, method.filename, schemaName); err != nil {
+					return
 				}
-				opt.Responses[string(cd)] = rs
+				opt.Responses[respCode] = rs
 			case tagTrimPrefixAndSpace(&c, methodDeprecated):
 				opt.Deprecated, _ = strconv.ParseBool(c)
 			case tagTrimPrefixAndSpace(&c, methodAccept):

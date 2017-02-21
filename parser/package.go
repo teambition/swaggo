@@ -299,7 +299,6 @@ func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key strin
 	}
 	m := swagger.Schema{Title: modelName, Type: "object", Properties: map[string]swagger.Propertie{}}
 	for _, f := range st.Fields.List {
-		isInherit := false
 		mp := swagger.Propertie{}
 
 		innerType, ref := "", ""
@@ -315,17 +314,9 @@ func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key strin
 				// anonymous member
 				// type A struct {
 				//     B
+				//     C
 				// }
-				if isInherit {
-					// type A struct {
-					//     B
-					//     C
-					// }
-					err = errors.New("can't inherit form other model twice")
-					return
-				}
-				isInherit = true
-				m.AllOf = &swagger.Schema{Ref: ref}
+				m.AllOf = append(m.AllOf, &swagger.Schema{Ref: ref})
 				continue
 			}
 			mp.Ref = "#/definitions/" + ref

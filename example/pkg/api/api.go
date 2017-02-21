@@ -18,8 +18,10 @@ func (c *Context) WriteResponse(response interface{}) {
 }
 
 // @Title GetStringByInt
-// @Summary get string by ID
-// @Description get string by ID
+// @Summary get string by ID summary 1
+// @Summary get string by ID summary 2
+// @Description get string by ID desc 1
+// @Description get string by ID desc 2
 // @Accept json,plain
 // @Produce json,plain
 // @Param some_id path int true "Some ID"
@@ -100,8 +102,8 @@ func (c *Context) GetStructArrayByString(rw web.ResponseWriter, req *web.Request
 }
 
 // @Title GetStruct3
-// @Summary get struct3
-// @Description get struct3
+// @Summary get struct3 summary
+// @Description get struct3 desc
 // @Accept json
 // @Produce json
 // @Success 200 StructureWithSlice

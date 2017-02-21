@@ -91,16 +91,22 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 					return
 				}
 				para.Schema = m
-				switch len(p) {
-				case 5:
-					para.Required, _ = strconv.ParseBool(p[3])
-					para.Description = strings.Trim(p[4], `" `)
-				case 6:
-					para.Default, _ = str2RealType(p[3], para.Type)
-					para.Required, _ = strconv.ParseBool(p[4])
-					para.Description = strings.Trim(p[5], `" `)
-				default:
-					para.Description = strings.Trim(p[3], `" `)
+				for idx, v := range p {
+					switch idx {
+					case 3:
+						// required
+						if v != "-" {
+							para.Required, _ = strconv.ParseBool(v)
+						}
+					case 4:
+						// description
+						para.Description = strings.Trim(v, `" `)
+					case 5:
+						// default value
+						if v != "-" {
+							para.Default, _ = str2RealType(strings.Trim(v, `" `), para.Type)
+						}
+					}
 				}
 				opt.Parameters = append(opt.Parameters, para)
 			case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
@@ -109,9 +115,13 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 				respCode, pos := peekNextSplitString(c)
 				c = strings.TrimSpace(c[pos:])
 				schemaName, pos := peekNextSplitString(c)
-				rs.Description = strings.Trim(c[pos:], `" `)
-				if err = ctrl.r.parseSchema(s, rs.Schema, method.filename, schemaName); err != nil {
-					return
+				if schemaName != "" {
+					if schemaName != "-" {
+						if err = ctrl.r.parseSchema(s, rs.Schema, method.filename, schemaName); err != nil {
+							return
+						}
+					}
+					rs.Description = strings.Trim(c[pos:], `" `)
 				}
 				opt.Responses[respCode] = rs
 			case tagTrimPrefixAndSpace(&c, methodDeprecated):
@@ -158,6 +168,9 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 			}
 		}
 		if routerPath != "" && !private {
+			if opt.OperationID == "" {
+				opt.OperationID = cName + "." + method.name
+			}
 			if s.Paths == nil {
 				s.Paths = map[string]*swagger.Item{}
 			}

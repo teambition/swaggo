@@ -179,8 +179,12 @@ func (p *pkg) findModel(modelName string) (*model, error) {
 	return nil, errModelNotFound
 }
 
+// cachedModels
+// model name -> import paths
+var cachedModels = map[string][]string{}
+
 // parseModel
-func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key string, err error) {
+func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (refUrl string, err error) {
 	var (
 		where     *pkg   // the pakcage that the model in it
 		model     *model // model object
@@ -239,15 +243,6 @@ func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key strin
 	if where == nil || model == nil {
 		err = fmt.Errorf("invalid schema(%s) in file(%s)", schema, filename)
 		return
-	}
-	// definitions: #/definitions/path/to/package:Model
-	key = where.importPath + ":" + modelName
-	if s.Definitions == nil {
-		s.Definitions = map[string]swagger.Schema{}
-	} else {
-		if _, ok := s.Definitions[key]; ok {
-			return
-		}
 	}
 
 	var iterField func(ast.Expr, *swagger.Propertie) (string, string, error)
@@ -319,7 +314,7 @@ func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key strin
 				m.AllOf = append(m.AllOf, &swagger.Schema{Ref: ref})
 				continue
 			}
-			mp.Ref = "#/definitions/" + ref
+			mp.Ref = ref
 		}
 		name := f.Names[0].Name
 		// check if it has tags
@@ -356,6 +351,33 @@ func (p *pkg) parseModel(s *swagger.Swagger, filename, schema string) (key strin
 		}
 	}
 
+	// definitions: #/definitions/Model
+	key := modelName
+	if ips, ok := cachedModels[modelName]; ok {
+		exsited := false
+		for k, v := range ips {
+			if where.importPath == v {
+				exsited = true
+				if k != 0 {
+					key = fmt.Sprintf("%s_%d", modelName, k)
+				}
+				break
+			}
+		}
+		if !exsited {
+			cachedModels[modelName] = append(ips, where.importPath)
+		}
+	} else {
+		cachedModels[modelName] = []string{where.importPath}
+	}
+	refUrl = "#/definitions/" + key
+	if s.Definitions == nil {
+		s.Definitions = map[string]swagger.Schema{}
+	} else {
+		if _, ok := s.Definitions[key]; ok {
+			return
+		}
+	}
 	s.Definitions[key] = m
 	return
 }

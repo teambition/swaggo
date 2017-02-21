@@ -1,8 +1,9 @@
 package api
 
 type SimpleStructure struct {
-	Id   int
+	Id   float32
 	Name string
+	Age  int
 }
 
 type SimpleStructureWithAnnotations struct {

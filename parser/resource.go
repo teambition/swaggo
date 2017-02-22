@@ -36,7 +36,8 @@ func newResoucre(importPath string, isSys bool) (*resource, error) {
 							ctrlName := fmt.Sprint(t.X)
 							if ctrl, ok := r.controllers[ctrlName]; !ok {
 								r.controllers[ctrlName] = &controller{
-									r: r,
+									r:    r,
+									name: ctrlName,
 									methods: []*method{
 										&method{
 											FuncDecl: specDecl,

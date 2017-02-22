@@ -46,7 +46,7 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 			if r.kind != "" {
 				r.item, err = nm.parse(s, nm.Type)
 			} else {
-				r, err = nm.parse(s, nm.Type)
+				return nm.parse(s, nm.Type)
 			}
 		}
 	case *ast.ArrayType:
@@ -208,6 +208,7 @@ func (r *result) parsePropertie(sp *swagger.Propertie) {
 		sp.Type = objectType
 		sp.Ref = r.ref
 	case interfaceType:
+		sp.Type = interfaceType
 		// TODO
 	}
 }

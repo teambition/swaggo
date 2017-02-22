@@ -3,18 +3,22 @@ package main
 import (
 	"os"
 
+	"fmt"
+
 	"github.com/teambition/swaggo/parser"
 	"github.com/urfave/cli"
 )
 
 const (
-	AppVersion = "v0.0.2"
+	AppVersion = "v0.0.3"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Version = AppVersion
 	app.Name = "swaggo"
+	app.HelpName = "swaggo"
+	app.Usage = "a utility for convert go annotations to swagger-doc"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "swagger, s",
@@ -33,7 +37,10 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		return parser.Parser(c.String("swagger"), c.String("output"), c.String("type"))
+		if err := parser.Parser(c.String("swagger"), c.String("output"), c.String("type")); err != nil {
+			return fmt.Errorf("[Error] %v ", err)
+		}
+		return nil
 	}
 	app.Run(os.Args)
 }

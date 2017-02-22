@@ -77,12 +77,12 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 					fallthrough
 				case path:
 					fallthrough
-				case formData:
+				case form:
 					fallthrough
 				case body:
 					break
 				default:
-					err = fmt.Errorf("(%s.%s) unknown param(%s). Maybe in(query, header, path, formData, body)", cName, method.name, para.Name)
+					err = fmt.Errorf("(%s.%s) unknown param(%s) type(%s), type must in(query, header, path, form, body)", cName, method.name, para.Name, p[1])
 					return
 				}
 				para.In = p[1]
@@ -167,7 +167,23 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 				}
 			}
 		}
+
 		if routerPath != "" && !private {
+			// check body count
+			hasBody := false
+			for _, v := range opt.Parameters {
+				if v.In == body {
+					if v.Name != body {
+						fmt.Printf("[Warnning] (%s.%s) body-type parameter(%s)'s name shuold be `body`\n", cName, method.name, v.Name)
+					}
+					if hasBody {
+						fmt.Printf("[Warnning] (%s.%s) has more than one body-type parameter, not all body works\n", cName, method.name)
+						break
+					} else {
+						hasBody = true
+					}
+				}
+			}
 			if opt.OperationID == "" {
 				opt.OperationID = cName + "." + method.name
 			}

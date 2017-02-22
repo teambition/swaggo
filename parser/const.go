@@ -52,9 +52,9 @@ const (
 )
 
 const (
-	query    = "query"
-	header   = "header"
-	path     = "path"
-	formData = "formData"
-	body     = "body"
+	query  = "query"
+	header = "header"
+	path   = "path"
+	form   = "form"
+	body   = "body"
 )

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"fmt"
+
 	"github.com/teambition/swaggo/swagger"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -120,6 +122,8 @@ func Parser(swaggerGo, output, t string) error {
 	case "yaml":
 		filename = yamlFile
 		data, err = yaml.Marshal(sw)
+	default:
+		err = fmt.Errorf("missing swagger file type(%s), only support in (json, yaml)", t)
 	}
 	if err != nil {
 		return err

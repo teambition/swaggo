@@ -48,6 +48,9 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 	}
 
 	for _, p := range pkgs {
+		if strings.HasSuffix(p.Name, "_test") {
+			continue
+		}
 		return &pkg{
 			Package:    p,
 			localName:  localName,
@@ -62,7 +65,6 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 
 // parseSchema parse schema in the file
 func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, schema string) (err error) {
-
 	emptyModel := &model{
 		filename: filename,
 		p:        p,
@@ -103,7 +105,6 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 		case "_":
 			// import _ "path/to/package"  cann't use
 			// ignore the imported package
-			continue
 		case "":
 			// import   "lib/math"         math.Sin
 		default:
@@ -137,6 +138,7 @@ func (p *pkg) findModel(modelName string) (*model, error) {
 			return m, nil
 		}
 	}
+
 	// check in package
 	for filename, f := range p.Files {
 		for name, obj := range f.Scope.Objects {
@@ -191,13 +193,25 @@ func (p *pkg) findModelBySchema(filename, schema string) (model *model, err erro
 		if pkgs, err = p.importPackages(filename); err != nil {
 			return
 		}
+
 		for _, v := range pkgs {
-			if v.localName == pkgName || (v.localName == "" && v.Name == pkgName) {
-				return v.findModel(modelName)
+			switch v.localName {
+			case "", "_":
+				if v.Name == pkgName {
+					return v.findModel(modelName)
+				}
+			default:
+				if v.localName == pkgName {
+					return v.findModel(modelName)
+				}
 			}
 		}
 	default:
 		err = fmt.Errorf("unsupport schema format(%s) in file(%s)", schema, filename)
+		return
+	}
+	if model == nil {
+		err = fmt.Errorf("missing schema(%s) in file(%s)", schema, filename)
 		return
 	}
 	return

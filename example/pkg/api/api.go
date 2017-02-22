@@ -142,6 +142,7 @@ func (c *Context) DelStruct3(rw web.ResponseWriter, req *web.Request) {
 // @Produce json
 // @Success 204 - "null"
 // @Success 200 StructureWithSlice
+// @Success 201 TypeString
 // @Failure 400 APIError "We need ID!!"
 // @Failure 404 APIError "Can not find ID"
 // @Router POST /testapi/get-struct3

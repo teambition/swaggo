@@ -1,5 +1,7 @@
 package api
 
+type TypeString string
+
 type SimpleStructure struct {
 	Id   float32
 	Name string

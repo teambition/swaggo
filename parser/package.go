@@ -25,7 +25,6 @@ type pkg struct {
 }
 
 // newPackage
-// filter used for imported packages
 func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err error) {
 	absPath := ""
 	ok := false

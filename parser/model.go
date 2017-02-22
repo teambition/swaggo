@@ -17,7 +17,7 @@ type model struct {
 	p        *pkg
 }
 
-// parseModel
+// parse parse the model in go code
 func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 	switch t := e.(type) {
 	case *ast.StarExpr:

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/teambition/swaggo/swagger"
@@ -21,28 +22,32 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 	switch t := e.(type) {
 	case *ast.StarExpr:
 		return m.parse(s, t.X)
-	case *ast.Ident:
-		if swaggerType, ok := basicTypes[t.Name]; ok {
+	case *ast.Ident, *ast.SelectorExpr:
+		schema := fmt.Sprint(t)
+		r = &result{}
+		if strings.HasPrefix(schema, "[]") {
+			schema = schema[2:]
+			r.kind = arrayType
+		}
+		// &{foo Bar} to foo.Bar
+		reInternalRepresentation := regexp.MustCompile("&\\{(\\w*) (\\w*)\\}")
+		schema = string(reInternalRepresentation.ReplaceAll([]byte(schema), []byte("$1.$2")))
+		// check if is basic type
+		if swaggerType, ok := basicTypes[schema]; ok {
 			return &result{
 				kind:    innerType,
+				buildin: schema,
 				swagger: swaggerType,
 			}, nil
 		}
-		if nm, err := m.p.findModelBySchema(m.filename, t.Name); err != nil {
-			return nil, err
-		} else {
-			return nm.parse(s, nm.Type)
-		}
-	case *ast.SelectorExpr:
-		schema := fmt.Sprint(t)
-		schema = strings.Replace(schema, " ", ".", -1)
-		schema = strings.Replace(schema, "&", "", -1)
-		schema = strings.Replace(schema, "{", "", -1)
-		schema = strings.Replace(schema, "}", "", -1)
 		if nm, err := m.p.findModelBySchema(m.filename, schema); err != nil {
 			return nil, err
 		} else {
-			return nm.parse(s, nm.Type)
+			if r.kind != "" {
+				r.item, err = nm.parse(s, nm.Type)
+			} else {
+				r, err = nm.parse(s, nm.Type)
+			}
 		}
 	case *ast.ArrayType:
 		r = &result{kind: arrayType}
@@ -50,6 +55,8 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 	case *ast.MapType:
 		r = &result{kind: mapType}
 		r.item, err = m.parse(s, t.Value)
+	case *ast.InterfaceType:
+		return &result{kind: interfaceType}, nil
 	case *ast.StructType:
 		r = &result{kind: objectType}
 		// definitions: #/definitions/Model
@@ -110,31 +117,33 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 				}
 				// parse tag for name
 				stag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
-				// doc tag include
-				// if the filed is a integer we can set: default:`123`
-				defautlValue := stag.Get("default")
-				if defautlValue != "" {
-					if sp.Default, err = str2RealType(defautlValue, r.buildin); err != nil {
-						return
+				// check jsonTag == "-"
+				jsonTag := strings.Split(stag.Get("json"), ",")
+				if len(jsonTag) != 0 && jsonTag[0] == "-" {
+					continue
+				}
+				name = jsonTag[0]
+				// swaggo:"(desc),(required),(default)"
+				swaggoTag := stag.Get("swaggo")
+				tmp := strings.Split(swaggoTag, ",")
+				for k, v := range tmp {
+					switch k {
+					case 0:
+						if v != "" && v != "-" {
+							ss.Required = append(ss.Required, name)
+						}
+					case 1:
+						sp.Description = v
+					case 2:
+						if v != "" {
+							if sp.Default, err = str2RealType(v, r.buildin); err != nil {
+								return
+							}
+						}
 					}
 				}
 
-				tagValues := strings.Split(stag.Get("json"), ",")
-				// dont add property if json tag first value is "-"
-				if len(tagValues) == 0 || tagValues[0] != "-" {
-					// set property name to the left most json tag value only if is not empty
-					if len(tagValues) > 0 && tagValues[0] != "" {
-						name = tagValues[0]
-					}
-
-					if required := stag.Get("required"); required != "" {
-						ss.Required = append(ss.Required, name)
-					}
-					if desc := stag.Get("desc"); desc != "" {
-						sp.Description = desc
-					}
-					ss.Properties[name] = sp
-				}
+				ss.Properties[name] = sp
 			}
 			s.Definitions[key] = ss
 		}
@@ -148,10 +157,11 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 var cachedModels = map[string][]string{}
 
 const (
-	innerType  = "inner"
-	arrayType  = "array"
-	mapType    = "map"
-	objectType = "object"
+	innerType     = "inner"
+	arrayType     = "array"
+	mapType       = "map"
+	objectType    = "object"
+	interfaceType = "interface"
 )
 
 type result struct {
@@ -171,6 +181,12 @@ func (r *result) parseSchema(ss *swagger.Schema) {
 	case objectType:
 		ss.Type = objectType
 		ss.Ref = r.ref
+	case arrayType:
+		ss.Type = arrayType
+		ss.Items = &swagger.Schema{}
+		r.item.parseSchema(ss.Items)
+	case interfaceType:
+		ss.Type = interfaceType
 	}
 }
 
@@ -191,5 +207,32 @@ func (r *result) parsePropertie(sp *swagger.Propertie) {
 	case objectType:
 		sp.Type = objectType
 		sp.Ref = r.ref
+	case interfaceType:
+		// TODO
 	}
+}
+
+// inner type and swagger type
+var basicTypes = map[string]string{
+	"bool":       "boolean:",
+	"uint":       "integer:int32",
+	"uint8":      "integer:int32",
+	"uint16":     "integer:int32",
+	"uint32":     "integer:int32",
+	"uint64":     "integer:int64",
+	"int":        "integer:int32",
+	"int8":       "integer:int32",
+	"int16":      "integer:int32",
+	"int32":      "integer:int32",
+	"int64":      "integer:int64",
+	"uintptr":    "integer:int64",
+	"float32":    "number:float",
+	"float64":    "number:double",
+	"string":     "string:",
+	"complex64":  "number:float",
+	"complex128": "number:double",
+	"byte":       "string:byte",
+	"rune":       "string:byte",
+	"time.Time":  "string:date-time",
+	"file":       "file:",
 }

@@ -99,14 +99,12 @@ func Parser(swaggerGo, output, t string) error {
 	// // @....
 	for _, im := range f.Imports {
 		importPath := strings.Trim(im.Path.Value, "\"")
-		if systemPackageFilter(importPath) {
-			p, err := newResoucre(importPath)
-			if err != nil {
-				return err
-			}
-			if err = p.run(sw); err != nil {
-				return err
-			}
+		p, err := newResoucre(importPath, true)
+		if err != nil {
+			return err
+		}
+		if err = p.run(sw); err != nil {
+			return err
 		}
 	}
 

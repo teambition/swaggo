@@ -35,14 +35,31 @@ func str2RealType(s string, typ string) (ret interface{}, err error) {
 	return
 }
 
-// systemPackageFilter filter the system packages
-func systemPackageFilter(importPath string) bool {
+func absPathFromGoPath(importPath string) (string, bool) {
+	goPaths := os.Getenv("GOPATH")
+	if goPaths == "" {
+		panic("GOPATH environment variable is not set or empty")
+	}
+	// find absolute path
+	for _, goPath := range filepath.SplitList(goPaths) {
+		wg, _ := filepath.EvalSymlinks(filepath.Join(goPath, "src", importPath))
+		if fileExists(wg) {
+			return wg, true
+		}
+	}
+	return "", false
+}
+
+func absPathFromGoRoot(importPath string) (string, bool) {
 	goRoot := os.Getenv("GOROOT")
 	if goRoot == "" {
 		panic("GOROOT environment variable is not set or empty")
 	}
 	wg, _ := filepath.EvalSymlinks(filepath.Join(goRoot, "src", importPath))
-	return !fileExists(wg)
+	if fileExists(wg) {
+		return wg, true
+	}
+	return "", false
 }
 
 // tagTrimPrefixAndSpace if prefix existed then trim it and trim space

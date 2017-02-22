@@ -1,11 +1,24 @@
 package api
 
+import (
+	"time"
+
+	"github.com/teambition/swaggo/example/pkg/api/subpackage"
+)
+
 type TypeString string
 
+type TypeInterface interface {
+	Hello()
+}
+
 type SimpleStructure struct {
-	Id   float32
-	Name string
-	Age  int
+	Id    float32                    `json:"id" swaggo:"true,dfsdfdsf,19"`
+	Name  string                     `json:"name" swaggo:"true,,xus"`
+	Age   int                        `json:"age" swaggo:"true,the user age,18"`
+	CTime time.Time                  `json:"ctime" swaggo:"true,create time"`
+	Sub   subpackage.SimpleStructure `json:"sub" swaggo:"true"`
+	I     TypeInterface              `json:"i" swaggo:"true"`
 }
 
 type SimpleStructureWithAnnotations struct {

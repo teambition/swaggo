@@ -17,17 +17,35 @@ func (c *Context) WriteResponse(response interface{}) {
 	c.Response = response
 }
 
+// Title unique id
 // @Title GetStringByInt
+
+// Summary short explain it's action
 // @Summary get string by ID summary 1
 // @Summary get string by ID summary 2
+
+// Description long explain about implement
 // @Description get string by ID desc 1
 // @Description get string by ID desc 2
+
+// Accept type include(json,plain,xml)
 // @Accept json,plain
+
+// Produce type include(json,plain,xml,html)
 // @Produce json,plain
-// @Param some_id path int true "Some ID"
+
+// Param:param_name/param_type/data_type/required(optional)/describtion(optional)/defaul_value(optional)
+// value == "-" means optional
+// @Param some_id path int - "Some ID"
+
+// Success:response_code/data_type(optional)/describtion(optional)
 // @Success 200  string
+
+// Failure:response_code/data_type(optional)/describtion(optional)
 // @Failure 400  APIError "We need ID!!"
 // @Failure 404  APIError "Can not find ID"
+
+// Router:http_method/api_path
 // @Router GET /testapi/get-string-by-int/{some_id}
 func (c *Context) GetStringByInt(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse(fmt.Sprint("Some data for %s ID", req.PathParams["some_id"]))
@@ -142,7 +160,7 @@ func (c *Context) DelStruct3(rw web.ResponseWriter, req *web.Request) {
 // @Produce json
 // @Success 204 - "null"
 // @Success 200 StructureWithSlice
-// @Success 201 TypeString
+// @Success 201 TypeInterface
 // @Failure 400 APIError "We need ID!!"
 // @Failure 404 APIError "Can not find ID"
 // @Router POST /testapi/get-struct3

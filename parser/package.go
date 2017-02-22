@@ -7,7 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/teambition/swaggo/swagger"
@@ -27,25 +26,20 @@ type pkg struct {
 
 // newPackage
 // filter used for imported packages
-func newPackage(localName, importPath string) (p *pkg, err error) {
-	goPaths := os.Getenv("GOPATH")
-	if goPaths == "" {
-		err = fmt.Errorf("GOPATH environment variable is not set or empty")
-		return
-	}
-	// find absolute path
+func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err error) {
 	absPath := ""
-	for _, goPath := range filepath.SplitList(goPaths) {
-		wg, _ := filepath.EvalSymlinks(filepath.Join(goPath, "src", importPath))
-		if fileExists(wg) {
-			absPath = wg
+	ok := false
+	if justGoPath {
+		absPath, ok = absPathFromGoPath(importPath)
+	} else {
+		if absPath, ok = absPathFromGoPath(importPath); !ok {
+			absPath, ok = absPathFromGoRoot(importPath)
 		}
 	}
-	if absPath == "" {
-		err = fmt.Errorf("package(%s) does not exist in the GOPATH", importPath)
+	if !ok {
+		err = fmt.Errorf("package(%s) does not existed", importPath)
 		return
 	}
-
 	pkgs, err := parser.ParseDir(token.NewFileSet(), absPath, func(info os.FileInfo) bool {
 		name := info.Name()
 		return !info.IsDir() && !strings.HasPrefix(name, ".")
@@ -69,16 +63,6 @@ func newPackage(localName, importPath string) (p *pkg, err error) {
 
 // parseSchema parse schema in the file
 func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, schema string) (err error) {
-	if strings.HasPrefix(schema, "[]") {
-		ss.Type = "array"
-		ss.Items = &swagger.Schema{}
-		return p.parseSchema(s, ss.Items, filename, schema[2:])
-	}
-	// file body
-	if schema == "file" {
-		ss.Type = "file"
-		return
-	}
 
 	emptyModel := &model{
 		filename: filename,
@@ -106,32 +90,30 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 	pkgs := []*pkg{}
 	for _, im := range f.Imports {
 		importPath := strings.Trim(im.Path.Value, "\"")
-		if systemPackageFilter(importPath) {
-			// alias name
-			localName := ""
-			if im.Name != nil {
-				localName = im.Name.Name
-			}
-			switch localName {
-			case ".":
-				// import . "lib/math"         Sin
-				// all the package's exported identifiers declared in that package's package block
-				// will be declared in the importing source file's file block
-				// and must be accessed without a qualifier.
-			case "_":
-				// import _ "path/to/package"  cann't use
-				// ignore the imported package
-				continue
-			case "":
-				// import   "lib/math"         math.Sin
-			default:
-				// import m "lib/math"         m.Sin
-			}
-			if importPkg, err := newPackage(localName, importPath); err != nil {
-				return nil, err
-			} else {
-				pkgs = append(pkgs, importPkg)
-			}
+		// alias name
+		localName := ""
+		if im.Name != nil {
+			localName = im.Name.Name
+		}
+		switch localName {
+		case ".":
+			// import . "lib/math"         Sin
+			// all the package's exported identifiers declared in that package's package block
+			// will be declared in the importing source file's file block
+			// and must be accessed without a qualifier.
+		case "_":
+			// import _ "path/to/package"  cann't use
+			// ignore the imported package
+			continue
+		case "":
+			// import   "lib/math"         math.Sin
+		default:
+			// import m "lib/math"         m.Sin
+		}
+		if importPkg, err := newPackage(localName, importPath, false); err != nil {
+			return nil, err
+		} else {
+			pkgs = append(pkgs, importPkg)
 		}
 	}
 	p.importPkgs[filename] = pkgs

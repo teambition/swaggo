@@ -11,7 +11,7 @@ import (
 // resource api resource
 type resource struct {
 	*pkg
-	// maybe one resource has several controller
+	// maybe has several controllers
 	controllers map[string]*controller // ctrl name -> ctrl
 }
 
@@ -35,22 +35,25 @@ func newResoucre(importPath string, isSys bool) (*resource, error) {
 						if isDocComments(specDecl.Doc) {
 							ctrlName := fmt.Sprint(t.X)
 							if ctrl, ok := r.controllers[ctrlName]; !ok {
-								r.controllers[ctrlName] = &controller{
-									r:    r,
-									name: ctrlName,
-									methods: []*method{
-										&method{
-											FuncDecl: specDecl,
-											filename: filename,
-											name:     specDecl.Name.Name,
-										},
-									},
-								}
-							} else {
-								ctrl.methods = append(ctrl.methods, &method{
-									FuncDecl: specDecl,
+								m := &method{
+									doc:      specDecl.Doc,
 									filename: filename,
 									name:     specDecl.Name.Name,
+									ctrl:     ctrl,
+								}
+								ctrl = &controller{
+									r:       r,
+									name:    ctrlName,
+									methods: []*method{m},
+								}
+
+								r.controllers[ctrlName] = ctrl
+							} else {
+								ctrl.methods = append(ctrl.methods, &method{
+									doc:      specDecl.Doc,
+									filename: filename,
+									name:     specDecl.Name.Name,
+									ctrl:     ctrl,
 								})
 							}
 						}
@@ -66,14 +69,12 @@ func newResoucre(importPath string, isSys bool) (*resource, error) {
 								ctrlName := t.Name.String()
 								if ctrl, ok := r.controllers[ctrlName]; !ok {
 									r.controllers[ctrlName] = &controller{
-										TypeSpec: t,
-										doc:      specDecl.Doc,
-										r:        r,
-										name:     t.Name.Name,
-										methods:  []*method{},
+										doc:     specDecl.Doc,
+										r:       r,
+										name:    t.Name.Name,
+										methods: []*method{},
 									}
 								} else {
-									ctrl.TypeSpec = t
 									ctrl.doc = specDecl.Doc
 									ctrl.name = t.Name.Name
 								}

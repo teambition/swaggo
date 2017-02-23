@@ -1,29 +1,28 @@
 package parser
 
 import (
-	"fmt"
 	"go/ast"
-	"strconv"
 	"strings"
 
 	"github.com/teambition/swaggo/swagger"
 )
 
 type controller struct {
-	*ast.TypeSpec
-	doc     *ast.CommentGroup
-	r       *resource
-	name    string
-	methods []*method
+	doc      *ast.CommentGroup
+	r        *resource
+	noStruct bool // there is no controller struct
+	name     string
+	tagName  string
+	filename string
+	methods  []*method
 }
 
 func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
-	cName := ""
 	tag := swagger.Tag{}
 	for _, c := range strings.Split(ctrl.doc.Text(), "\n") {
 		switch {
 		case tagTrimPrefixAndSpace(&c, ctrlName):
-			cName = c
+			ctrl.tagName = c
 		case tagTrimPrefixAndSpace(&c, ctrlDesc):
 			tag.Description = c
 		case tagTrimPrefixAndSpace(&c, ctrlPrivate):
@@ -31,191 +30,20 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 			return
 		}
 	}
-	if cName == "" {
-		cName = ctrl.name
+	if ctrl.tagName == "" {
+		if ctrl.noStruct {
+			// TODO
+			// means no controller struct for methods
+			return
+		}
+		ctrl.tagName = ctrl.name
 	}
-	tag.Name = cName
+	tag.Name = ctrl.tagName
 	s.Tags = append(s.Tags, tag)
 
-	for _, method := range ctrl.methods {
-		var routerPath, HTTPMethod string
-		opt := swagger.Operation{
-			Responses: make(map[string]swagger.Response),
-			Tags:      []string{tag.Name},
-		}
-		private := false
-		for _, c := range strings.Split(method.Doc.Text(), "\n") {
-			switch {
-			case tagTrimPrefixAndSpace(&c, methodPrivate):
-				private = true
-			case tagTrimPrefixAndSpace(&c, methodTitle):
-				opt.OperationID = cName + "." + c
-			case tagTrimPrefixAndSpace(&c, methodDesc):
-				if opt.Description != "" {
-					opt.Description += "\n" + c
-				} else {
-					opt.Description = c
-				}
-			case tagTrimPrefixAndSpace(&c, methodSummary):
-				if opt.Summary != "" {
-					opt.Summary += "\n" + c
-				} else {
-					opt.Summary = c
-				}
-			case tagTrimPrefixAndSpace(&c, methodParam):
-				para := swagger.Parameter{}
-				p := getparams(c)
-				if len(p) < 4 {
-					err = fmt.Errorf("(%s.%s) comments %s shuold have 4 params at least", cName, method.name)
-					return
-				}
-				para.Name = p[0]
-				switch p[1] {
-				case query:
-					fallthrough
-				case header:
-					fallthrough
-				case path:
-					fallthrough
-				case form:
-					fallthrough
-				case body:
-					break
-				default:
-					err = fmt.Errorf("(%s.%s) unknown param(%s) type(%s), type must in(query, header, path, form, body)", cName, method.name, para.Name, p[1])
-					return
-				}
-				para.In = p[1]
-				m := &swagger.Schema{}
-				if err = ctrl.r.parseSchema(s, m, method.filename, p[2]); err != nil {
-					return
-				}
-				para.Schema = m
-				for idx, v := range p {
-					switch idx {
-					case 3:
-						// required
-						if v != "-" {
-							para.Required, _ = strconv.ParseBool(v)
-						}
-					case 4:
-						// description
-						para.Description = strings.Trim(v, `" `)
-					case 5:
-						// default value
-						if v != "-" {
-							if para.Default, err = str2RealType(strings.Trim(v, `" `), p[2]); err != nil {
-								fmt.Printf("[Warnning] (%s.%s) parse default value of param(%s) type(%s) error(%v)\n", cName, method.name, para.Name, p[2], err)
-							}
-
-						}
-					}
-				}
-				opt.Parameters = append(opt.Parameters, para)
-			case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
-				rs := swagger.Response{}
-				rs.Schema = &swagger.Schema{}
-				respCode, pos := peekNextSplitString(c)
-				c = strings.TrimSpace(c[pos:])
-				schemaName, pos := peekNextSplitString(c)
-				if schemaName != "" {
-					if schemaName != "-" {
-						if err = ctrl.r.parseSchema(s, rs.Schema, method.filename, schemaName); err != nil {
-							return
-						}
-					}
-					rs.Description = strings.Trim(c[pos:], `" `)
-				}
-				opt.Responses[respCode] = rs
-			case tagTrimPrefixAndSpace(&c, methodDeprecated):
-				opt.Deprecated, _ = strconv.ParseBool(c)
-			case tagTrimPrefixAndSpace(&c, methodAccept):
-				for _, a := range strings.Split(c, ",") {
-					switch a {
-					case jsonType:
-						opt.Consumes = append(opt.Consumes, appJson)
-					case xmlType:
-						opt.Consumes = append(opt.Consumes, appXml)
-					case plainType:
-						opt.Consumes = append(opt.Consumes, textPlain)
-					case htmlType:
-						opt.Consumes = append(opt.Consumes, textHtml)
-					}
-				}
-			case tagTrimPrefixAndSpace(&c, methodProduce):
-				for _, p := range strings.Split(c, ",") {
-					switch p {
-					case jsonType:
-						opt.Produces = append(opt.Produces, appJson)
-					case xmlType:
-						opt.Produces = append(opt.Produces, appXml)
-					case plainType:
-						opt.Produces = append(opt.Produces, textPlain)
-					case htmlType:
-						opt.Produces = append(opt.Produces, textHtml)
-					}
-				}
-			case tagTrimPrefixAndSpace(&c, methodRouter):
-				// @Router / [post]
-				elements := strings.Split(c, " ")
-				if len(elements) == 0 {
-					return fmt.Errorf("method(%s) should has Router information", method.name)
-				}
-				if len(elements) == 1 {
-					HTTPMethod = "GET"
-					routerPath = elements[0]
-				} else {
-					HTTPMethod = strings.ToUpper(elements[0])
-					routerPath = elements[1]
-				}
-			}
-		}
-
-		if routerPath != "" && !private {
-			// check body count
-			hasBody := false
-			for _, v := range opt.Parameters {
-				if v.In == body {
-					if v.Name != body {
-						fmt.Printf("[Warnning] (%s.%s) body-type parameter(%s)'s name shuold be `body`\n", cName, method.name, v.Name)
-					}
-					if hasBody {
-						fmt.Printf("[Warnning] (%s.%s) has more than one body-type parameter, not all body works\n", cName, method.name)
-						break
-					} else {
-						hasBody = true
-					}
-				}
-			}
-			if opt.OperationID == "" {
-				opt.OperationID = cName + "." + method.name
-			}
-			if s.Paths == nil {
-				s.Paths = map[string]*swagger.Item{}
-			}
-			item, ok := s.Paths[routerPath]
-			if !ok {
-				item = &swagger.Item{}
-			}
-			switch HTTPMethod {
-			case "GET":
-				item.Get = &opt
-			case "POST":
-				item.Post = &opt
-			case "PUT":
-				item.Put = &opt
-			case "PATCH":
-				item.Patch = &opt
-			case "DELETE":
-				item.Delete = &opt
-			case "HEAD":
-				item.Head = &opt
-			case "OPTIONS":
-				item.Options = &opt
-			}
-			if s.Paths == nil {
-			}
-			s.Paths[routerPath] = item
+	for _, m := range ctrl.methods {
+		if err = m.parse(s); err != nil {
+			return
 		}
 	}
 	return

@@ -63,7 +63,7 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 	return
 }
 
-// parseSchema parse schema in the file
+// parseSchema Parse schema in this code file
 func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, schema string) (err error) {
 	emptyModel := &model{
 		filename: filename,

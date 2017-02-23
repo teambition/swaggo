@@ -104,7 +104,10 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 					case 5:
 						// default value
 						if v != "-" {
-							para.Default, _ = str2RealType(strings.Trim(v, `" `), para.Type)
+							if para.Default, err = str2RealType(strings.Trim(v, `" `), p[2]); err != nil {
+								fmt.Printf("[Warnning] (%s.%s) parse default value of param(%s) type(%s) error(%v)\n", cName, method.name, para.Name, p[2], err)
+							}
+
 						}
 					}
 				}

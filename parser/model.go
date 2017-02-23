@@ -28,6 +28,8 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 		if strings.HasPrefix(schema, "[]") {
 			schema = schema[2:]
 			r.kind = arrayType
+			r.item, err = m.parse(s, ast.NewIdent(schema))
+			return
 		}
 		// &{foo Bar} to foo.Bar
 		reInternalRepresentation := regexp.MustCompile("&\\{(\\w*) (\\w*)\\}")
@@ -43,11 +45,7 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 		if nm, err := m.p.findModelBySchema(m.filename, schema); err != nil {
 			return nil, err
 		} else {
-			if r.kind != "" {
-				r.item, err = nm.parse(s, nm.Type)
-			} else {
-				return nm.parse(s, nm.Type)
-			}
+			return nm.parse(s, nm.Type)
 		}
 	case *ast.ArrayType:
 		r = &result{kind: arrayType}

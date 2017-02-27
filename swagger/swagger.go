@@ -24,13 +24,12 @@ type Swagger struct {
 
 // Information Provides metadata about the API. The metadata can be used by the clients if needed.
 type Information struct {
-	Title          string `json:"title,omitempty" yaml:"title,omitempty"`
-	Description    string `json:"description,omitempty" yaml:"description,omitempty"`
-	Version        string `json:"version,omitempty" yaml:"version,omitempty"`
-	TermsOfService string `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
-
-	Contact Contact  `json:"contact,omitempty" yaml:"contact,omitempty"`
-	License *License `json:"license,omitempty" yaml:"license,omitempty"`
+	Title          string  `json:"title,omitempty" yaml:"title,omitempty"`
+	Description    string  `json:"description,omitempty" yaml:"description,omitempty"`
+	Version        string  `json:"version,omitempty" yaml:"version,omitempty"`
+	TermsOfService string  `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
+	Contact        Contact `json:"contact,omitempty" yaml:"contact,omitempty"`
+	License        License `json:"license,omitempty" yaml:"license,omitempty"`
 }
 
 // Contact information for the exposed API.

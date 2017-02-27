@@ -16,8 +16,8 @@ type resource struct {
 }
 
 // newResoucre an api definition
-func newResoucre(importPath string, isSys bool) (*resource, error) {
-	p, err := newPackage("_", importPath, isSys)
+func newResoucre(importPath string, justGoPath bool) (*resource, error) {
+	p, err := newPackage("_", importPath, justGoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -39,14 +39,14 @@ func newResoucre(importPath string, isSys bool) (*resource, error) {
 									doc:      specDecl.Doc,
 									filename: filename,
 									name:     specDecl.Name.Name,
-									ctrl:     ctrl,
 								}
 								ctrl = &controller{
-									r:       r,
-									name:    ctrlName,
-									methods: []*method{m},
+									r:        r,
+									filename: filename,
+									name:     ctrlName,
+									methods:  []*method{m},
 								}
-
+								m.ctrl = ctrl
 								r.controllers[ctrlName] = ctrl
 							} else {
 								ctrl.methods = append(ctrl.methods, &method{
@@ -69,14 +69,13 @@ func newResoucre(importPath string, isSys bool) (*resource, error) {
 								ctrlName := t.Name.String()
 								if ctrl, ok := r.controllers[ctrlName]; !ok {
 									r.controllers[ctrlName] = &controller{
-										doc:     specDecl.Doc,
-										r:       r,
-										name:    t.Name.Name,
-										methods: []*method{},
+										doc:      specDecl.Doc,
+										r:        r,
+										filename: filename,
+										name:     t.Name.Name,
 									}
 								} else {
 									ctrl.doc = specDecl.Doc
-									ctrl.name = t.Name.Name
 								}
 							}
 						}

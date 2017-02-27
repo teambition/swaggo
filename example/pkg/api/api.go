@@ -2,9 +2,17 @@ package api
 
 import (
 	"fmt"
+	_ "os"
 
 	"github.com/gocraft/web"
 	"github.com/teambition/swaggo/example/pkg/api/subpackage"
+	sub "github.com/teambition/swaggo/example/pkg/api/subpackage_alias"
+	. "github.com/teambition/swaggo/example/pkg/api/subpackage_dot"
+)
+
+var (
+	_ = sub.SubStructAlias{}
+	_ = SubStructDot{}
 )
 
 // @Name testapi
@@ -20,26 +28,33 @@ func (c *Context) WriteResponse(response interface{}) {
 // Title unique id
 // @Title GetStringByInt
 //
+// Deprecated show if this method has been deprecated
+// @Deprecated true
+//
 // Summary short explain it's action
-// @Summary get string by ID summary 1
-// @Summary get string by ID summary 2
+// @Summary get string by ID summary
+// @Summary multi line
 //
 // Description long explain about implement
-// @Description get string by ID desc 1
-// @Description get string by ID desc 2
+// @Description get string by ID desc
+// @Description multi line
 //
 // Accept type include(json,plain,xml)
-// @Accept json,plain
+// @Accept json,plain,xml,html
 //
 // Produce type include(json,plain,xml,html)
-// @Produce json,plain
+// @Produce json,plain,xml,html
 //
 // Param:param_name/param_type/data_type/required(optional)/describtion(optional)/defaul_value(optional)
 // value == "-" means optional
 // @Param some_id path int - "Some ID" 123
+// @Param some_id body string - "Request Body"
+// @Param body body string - "Request Body"
 //
 // Success:response_code/data_type(optional)/describtion(optional)
 // @Success 200  string
+// @Success 201  SubStructDot
+// @Success 202  sub.SubStructAlias
 //
 // Failure:response_code/data_type(optional)/describtion(optional)
 // @Failure 400  APIError "We need ID!!"

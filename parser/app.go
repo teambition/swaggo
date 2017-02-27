@@ -2,25 +2,22 @@ package parser
 
 import (
 	"encoding/json"
+	"fmt"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
-	"fmt"
-
 	"github.com/teambition/swaggo/swagger"
 	yaml "gopkg.in/yaml.v2"
 )
 
-func Parser(swaggerGo, output, t string) error {
+func doc2Swagger(swaggerGo string, sw *swagger.Swagger) error {
 	f, err := parser.ParseFile(token.NewFileSet(), swaggerGo, nil, parser.ParseComments)
 	if err != nil {
 		return err
 	}
-
-	sw := swagger.NewV2()
 	// Analyse API comments
 	if f.Comments != nil {
 		for _, c := range f.Comments {
@@ -41,17 +38,9 @@ func Parser(swaggerGo, output, t string) error {
 				case tagTrimPrefixAndSpace(&s, apiURL):
 					sw.Infos.Contact.URL = s
 				case tagTrimPrefixAndSpace(&s, apiLicenseUrl):
-					if sw.Infos.License == nil {
-						sw.Infos.License = &swagger.License{URL: s}
-					} else {
-						sw.Infos.License.URL = s
-					}
+					sw.Infos.License.URL = s
 				case tagTrimPrefixAndSpace(&s, apiLicense):
-					if sw.Infos.License == nil {
-						sw.Infos.License = &swagger.License{Name: s}
-					} else {
-						sw.Infos.License.Name = s
-					}
+					sw.Infos.License.Name = s
 				case tagTrimPrefixAndSpace(&s, apiSchemes):
 					sw.Schemes = strings.Split(s, ",")
 				case tagTrimPrefixAndSpace(&s, apiHost):
@@ -109,7 +98,15 @@ func Parser(swaggerGo, output, t string) error {
 			return err
 		}
 	}
+	return nil
+}
 
+func Parser(swaggerGo, output, t string) error {
+	sw := swagger.NewV2()
+	err := doc2Swagger(swaggerGo, sw)
+	if err != nil {
+		return err
+	}
 	var (
 		data     []byte
 		filename string

@@ -1,16 +1,15 @@
 package main
 
 import (
-	"os"
-
 	"fmt"
+	"os"
 
 	"github.com/teambition/swaggo/parser"
 	"github.com/urfave/cli"
 )
 
 const (
-	AppVersion = "v0.0.4"
+	AppVersion = "v0.0.6"
 )
 
 func main() {

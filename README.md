@@ -31,3 +31,6 @@ swaggo --help
 ```
 
 
+### TODO
+
+- [ ] Support API without Controller structure 

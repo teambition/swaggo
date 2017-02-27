@@ -39,6 +39,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 		switch {
 		case tagTrimPrefixAndSpace(&c, methodPrivate):
 			private = true
+			break
 		case tagTrimPrefixAndSpace(&c, methodTitle):
 			opt.OperationID = tagName + "." + c
 		case tagTrimPrefixAndSpace(&c, methodDesc):
@@ -97,7 +98,6 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 					if v != "-" {
 						if para.Default, err = str2RealType(strings.Trim(v, `" `), p[2]); err != nil {
 							err = m.prettyErr("parse default value of param(%s) type(%s) error(%v)", p[0], p[2], err)
-							fmt.Println("[Warnning] ", err)
 						}
 					}
 				}

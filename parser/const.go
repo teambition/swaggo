@@ -1,15 +1,24 @@
 package parser
 
 const (
-	jsonType  = "json"
-	appJson   = "application/json"
-	xmlType   = "xml"
-	appXml    = "application/xml"
-	plainType = "plain"
-	textPlain = "text/plain"
-	htmlType  = "html"
-	textHtml  = "text/html"
+	jsonType     = "json"
+	xmlType      = "xml"
+	plainType    = "plain"
+	htmlType     = "html"
+	formType     = "form"
+	formDataType = "formData"
+	streamType   = "stream"
 )
+
+var contentType = map[string]string{
+	jsonType:     "application/json",
+	xmlType:      "application/xml",
+	plainType:    "text/plain",
+	htmlType:     "text/html",
+	formType:     "application/x-www-form-urlencoded",
+	formDataType: "multipart/form-data",
+	streamType:   "application/octet-stream",
+}
 
 const (
 	jsonFile = "swagger.json"
@@ -46,8 +55,8 @@ const (
 	methodParam      = "@Param"
 	methodFailure    = "@Failure"
 	methodDeprecated = "@Deprecated"
-	methodAccept     = "@Accept"
-	methodProduce    = "@Produce"
+	methodConsumes   = "@Consumes"
+	methodProduces   = "@Produces"
 	methodRouter     = "@Router"
 )
 
@@ -55,6 +64,6 @@ const (
 	query  = "query"
 	header = "header"
 	path   = "path"
-	form   = "form"
+	form   = "formData"
 	body   = "body"
 )

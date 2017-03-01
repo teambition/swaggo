@@ -170,6 +170,54 @@ type result struct {
 	item    *result // kind in (array, map)
 }
 
+func (r *result) parseParam(sp *swagger.Parameter) error {
+	switch sp.In {
+	case body:
+		if sp.Schema == nil {
+			sp.Schema = &swagger.Schema{}
+		}
+		r.parseSchema(sp.Schema)
+	default:
+		switch r.kind {
+		case innerType:
+			tmp := strings.Split(r.swagger, ":")
+			sp.Type = tmp[0]
+			sp.Format = tmp[1]
+		case arrayType:
+			sp.Type = arrayType
+			sp.Items = &swagger.ParameterItems{}
+			if err := r.item.parseParamItem(sp.Items); err != nil {
+				return err
+			}
+		default:
+			// TODO
+			// not support object and array in any value other than "body"
+			return fmt.Errorf("not support(%s) in(%s) any value other than `body`", r.kind, sp.In)
+		}
+	}
+	return nil
+}
+
+func (r *result) parseParamItem(sp *swagger.ParameterItems) error {
+	switch r.kind {
+	case innerType:
+		tmp := strings.Split(r.swagger, ":")
+		sp.Type = tmp[0]
+		sp.Format = tmp[1]
+	case arrayType:
+		sp.Type = arrayType
+		sp.Items = &swagger.ParameterItems{}
+		if err := r.item.parseParamItem(sp.Items); err != nil {
+			return err
+		}
+	default:
+		// TODO
+		// param not support object, map, interface
+		return fmt.Errorf("not support(%s) in any value other than `body`", r.kind)
+	}
+	return nil
+}
+
 func (r *result) parseSchema(ss *swagger.Schema) {
 	switch r.kind {
 	case innerType:
@@ -184,7 +232,7 @@ func (r *result) parseSchema(ss *swagger.Schema) {
 		ss.Items = &swagger.Schema{}
 		r.item.parseSchema(ss.Items)
 	case interfaceType:
-		ss.Type = interfaceType
+		ss.Type = objectType
 	}
 }
 
@@ -206,7 +254,7 @@ func (r *result) parsePropertie(sp *swagger.Propertie) {
 		sp.Type = objectType
 		sp.Ref = r.ref
 	case interfaceType:
-		sp.Type = interfaceType
+		sp.Type = objectType
 		// TODO
 	}
 }

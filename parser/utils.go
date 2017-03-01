@@ -82,20 +82,10 @@ func isDocComments(comments *ast.CommentGroup) bool {
 	return false
 }
 
-// peekNextSplitString ...
-func peekNextSplitString(ss string) (s string, spacePos int) {
-	spacePos = strings.IndexFunc(ss, unicode.IsSpace)
-	if spacePos < 0 {
-		s = ss
-		spacePos = len(ss)
-	} else {
-		s = strings.TrimSpace(ss[:spacePos])
-	}
-	return
-}
-
 // getparams analisys params return []string
-// @Param	query		form	 string	true		"The email for login"
+// @Param query form string true "The email for login"
+// @Success 200 string "Some Success"
+// @Failure 400 string "Some Failure"
 func getparams(str string) []string {
 	var s []rune
 	var j int
@@ -126,4 +116,14 @@ func getparams(str string) []string {
 		r = append(r, string(s))
 	}
 	return r
+}
+
+// contentTypeByDoc Get content types from comment
+func contentTypeByDoc(s string) []string {
+	result := []string{}
+	tmp := strings.Split(s, ",")
+	for _, v := range tmp {
+		result = append(result, contentType[v])
+	}
+	return result
 }

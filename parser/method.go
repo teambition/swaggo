@@ -78,11 +78,9 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 				return
 			}
 			para.In = p[1]
-			ss := &swagger.Schema{}
-			if err = m.ctrl.r.parseSchema(s, ss, m.filename, p[2]); err != nil {
+			if err = m.ctrl.r.parseParam(s, &para, m.filename, p[2]); err != nil {
 				return
 			}
-			para.Schema = ss
 			for idx, v := range p {
 				switch idx {
 				case 3:
@@ -98,6 +96,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 					if v != "-" {
 						if para.Default, err = str2RealType(strings.Trim(v, `" `), p[2]); err != nil {
 							err = m.prettyErr("parse default value of param(%s) type(%s) error(%v)", p[0], p[2], err)
+							return
 						}
 					}
 				}
@@ -105,46 +104,24 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 			opt.Parameters = append(opt.Parameters, para)
 		case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
 			sr := swagger.Response{Schema: &swagger.Schema{}}
-			respCode, pos := peekNextSplitString(c)
-			c = strings.TrimSpace(c[pos:])
-			schemaName, pos := peekNextSplitString(c)
-			if schemaName != "" {
-				if schemaName != "-" {
-					if err = m.ctrl.r.parseSchema(s, sr.Schema, m.filename, schemaName); err != nil {
-						return
-					}
-				}
-				sr.Description = strings.Trim(c[pos:], `" `)
+			p := getparams(c)
+			if len(p) != 3 {
+				err = m.prettyErr("response (%s) format error, need(code, type, description)", c)
+				return
 			}
-			opt.Responses[respCode] = sr
+			if p[1] != "-" {
+				if err = m.ctrl.r.parseSchema(s, sr.Schema, m.filename, p[1]); err != nil {
+					return
+				}
+			}
+			sr.Description = p[2]
+			opt.Responses[p[0]] = sr
 		case tagTrimPrefixAndSpace(&c, methodDeprecated):
 			opt.Deprecated, _ = strconv.ParseBool(c)
-		case tagTrimPrefixAndSpace(&c, methodAccept):
-			for _, a := range strings.Split(c, ",") {
-				switch a {
-				case jsonType:
-					opt.Consumes = append(opt.Consumes, appJson)
-				case xmlType:
-					opt.Consumes = append(opt.Consumes, appXml)
-				case plainType:
-					opt.Consumes = append(opt.Consumes, textPlain)
-				case htmlType:
-					opt.Consumes = append(opt.Consumes, textHtml)
-				}
-			}
-		case tagTrimPrefixAndSpace(&c, methodProduce):
-			for _, p := range strings.Split(c, ",") {
-				switch p {
-				case jsonType:
-					opt.Produces = append(opt.Produces, appJson)
-				case xmlType:
-					opt.Produces = append(opt.Produces, appXml)
-				case plainType:
-					opt.Produces = append(opt.Produces, textPlain)
-				case htmlType:
-					opt.Produces = append(opt.Produces, textHtml)
-				}
-			}
+		case tagTrimPrefixAndSpace(&c, methodConsumes):
+			opt.Consumes = contentTypeByDoc(c)
+		case tagTrimPrefixAndSpace(&c, methodProduces):
+			opt.Produces = contentTypeByDoc(c)
 		case tagTrimPrefixAndSpace(&c, methodRouter):
 			// @Router / [post]
 			elements := strings.Split(c, " ")

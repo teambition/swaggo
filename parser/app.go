@@ -48,31 +48,9 @@ func doc2Swagger(swaggerGo string, sw *swagger.Swagger) error {
 				case tagTrimPrefixAndSpace(&s, apiBasePath):
 					sw.BasePath = s
 				case tagTrimPrefixAndSpace(&s, apiConsumes):
-					for _, a := range strings.Split(s, ",") {
-						switch a {
-						case jsonType:
-							sw.Consumes = append(sw.Consumes, appJson)
-						case xmlType:
-							sw.Consumes = append(sw.Consumes, appXml)
-						case plainType:
-							sw.Consumes = append(sw.Consumes, textPlain)
-						case htmlType:
-							sw.Consumes = append(sw.Consumes, textHtml)
-						}
-					}
+					sw.Consumes = contentTypeByDoc(s)
 				case tagTrimPrefixAndSpace(&s, apiProduces):
-					for _, p := range strings.Split(s, ",") {
-						switch p {
-						case jsonType:
-							sw.Produces = append(sw.Produces, appJson)
-						case xmlType:
-							sw.Produces = append(sw.Produces, appXml)
-						case plainType:
-							sw.Produces = append(sw.Produces, textPlain)
-						case htmlType:
-							sw.Produces = append(sw.Produces, textHtml)
-						}
-					}
+					sw.Produces = contentTypeByDoc(s)
 				}
 			}
 		}

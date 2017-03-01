@@ -19,6 +19,7 @@ type SimpleStructure struct {
 	CTime time.Time                  `json:"ctime" swaggo:"true,create time"`
 	Sub   subpackage.SimpleStructure `json:"sub" swaggo:"true"`
 	I     TypeInterface              `json:"i" swaggo:"true"`
+	Map   map[string]string          `json:"map", swaggo:",map type"`
 }
 
 type SimpleStructureWithAnnotations struct {

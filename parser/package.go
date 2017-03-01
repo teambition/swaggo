@@ -74,9 +74,22 @@ func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, sche
 	if err != nil {
 		return err
 	}
-
 	r.parseSchema(ss)
 	return
+}
+
+// parseParam Parse param in this code file
+func (p *pkg) parseParam(s *swagger.Swagger, sp *swagger.Parameter, filename, schema string) (err error) {
+	emptyModel := &model{
+		filename: filename,
+		p:        p,
+	}
+
+	r, err := emptyModel.parse(s, ast.NewIdent(schema))
+	if err != nil {
+		return err
+	}
+	return r.parseParam(sp)
 }
 
 // parseImports parse packages from file

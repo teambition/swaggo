@@ -60,7 +60,7 @@ func (suite *AppSuite) TestSwagger() {
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, suite.Consumes)
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, suite.Produces)
 
-	assert.Equal("http://127.0.0.1:3000", suite.Host)
+	assert.Equal("127.0.0.1:3000", suite.Host)
 	assert.Equal("/api", suite.BasePath)
 	assert.Equal(7, len(suite.Paths))
 	router := suite.Paths["/testapi/get-string-by-int/{some_id}"]
@@ -73,13 +73,12 @@ func (suite *AppSuite) TestSwagger() {
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, router.Get.Consumes)
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, router.Get.Produces)
 
-	assert.Equal(3, len(router.Get.Parameters))
 	assert.Equal("path", router.Get.Parameters[0].In)
 	assert.Equal("some_id", router.Get.Parameters[0].Name)
 	assert.Equal("Some ID", router.Get.Parameters[0].Description)
-	assert.Equal(false, router.Get.Parameters[0].Required)
-	assert.Equal("integer", router.Get.Parameters[0].Schema.Type)
-	assert.Equal("int32", router.Get.Parameters[0].Schema.Format)
+	assert.Equal(true, router.Get.Parameters[0].Required)
+	assert.Equal("integer", router.Get.Parameters[0].Type)
+	assert.Equal("int32", router.Get.Parameters[0].Format)
 	assert.Equal(123, router.Get.Parameters[0].Default)
 
 	// 200

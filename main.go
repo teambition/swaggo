@@ -50,9 +50,11 @@ func main() {
 			c.String("output"),
 			c.String("type"),
 			c.Bool("dev")); err != nil {
-			return fmt.Errorf("[Error] %v ", err)
+			return fmt.Errorf("[Error] %v", err)
 		}
 		return nil
 	}
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Printf("[Error] %v", err)
+	}
 }

@@ -11,8 +11,8 @@ import (
 func TestErrorPath(t *testing.T) {
 	assert := assert.New(t)
 	// error test
-	projectPath := "../example"
-	swaggerGo := "../example/swagger.go.err"
+	projectPath := "../test"
+	swaggerGo := "../test/swagger.go.err"
 	dev := true
 	as, err := NewAppSuite(projectPath, swaggerGo, dev)
 	assert.Nil(as)
@@ -22,8 +22,8 @@ func TestErrorPath(t *testing.T) {
 func TestAppSuite(t *testing.T) {
 	assert := assert.New(t)
 	// error test
-	projectPath := "../example"
-	swaggerGo := "../example/swagger.go"
+	projectPath := "../test"
+	swaggerGo := "../test/swagger.go"
 	dev := true
 	as, err := NewAppSuite(projectPath, swaggerGo, dev)
 	assert.Nil(err)

@@ -1,0 +1,3 @@
+[submodule "kpass"]
+	path = examples/kpass
+	url = https://github.com/seccom/kpass

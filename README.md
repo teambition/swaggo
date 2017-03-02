@@ -30,6 +30,9 @@ go get -u -v github.com/teambition/swaggo
 swaggo --help
 ```
 
+### Kpass Example
+
+[Kpass](https://github.com/seccom/kpass#swagger-document)
 
 ### TODO
 

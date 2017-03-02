@@ -39,8 +39,10 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 	for _, c := range strings.Split(m.doc.Text(), "\n") {
 		switch {
 		case tagTrimPrefixAndSpace(&c, methodPrivate):
-			private = true
-			break
+			if !devMode {
+				private = true
+				break
+			}
 		case tagTrimPrefixAndSpace(&c, methodTitle):
 			opt.OperationID = tagName + "." + c
 		case tagTrimPrefixAndSpace(&c, methodDesc):
@@ -104,27 +106,28 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 			}
 			opt.Parameters = append(opt.Parameters, &para)
 		case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
-			sr := swagger.Response{Schema: &swagger.Schema{}}
+			sr := swagger.Response{}
 			p := getparams(c)
-			switch len(p) {
-			case 1:
-				// 204
-			case 2:
-				// 200 string
-				// 200 -
-				if p[1] != "-" {
-					if err = m.ctrl.r.parseSchema(s, sr.Schema, m.filename, p[1]); err != nil {
-						return
+			respCode := ""
+			for idx, v := range p {
+				switch idx {
+				case 0:
+					respCode = v
+				case 1:
+					if v != "-" {
+						sr.Schema = &swagger.Schema{}
+						if err = m.ctrl.r.parseSchema(s, sr.Schema, m.filename, v); err != nil {
+							return
+						}
 					}
+				case 2:
+					sr.Description = v
+				default:
+					err = m.prettyErr("response (%s) format error, need(code, type, description)", c)
+					return
 				}
-			case 3:
-				sr.Description = p[2]
-			default:
-				err = m.prettyErr("response (%s) format error, need(code, type, description)", c)
-				return
 			}
-
-			opt.Responses[p[0]] = sr
+			opt.Responses[respCode] = sr
 		case tagTrimPrefixAndSpace(&c, methodDeprecated):
 			opt.Deprecated, _ = strconv.ParseBool(c)
 		case tagTrimPrefixAndSpace(&c, methodConsumes):

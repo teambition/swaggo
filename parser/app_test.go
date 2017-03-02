@@ -11,8 +11,10 @@ import (
 func TestErrorPath(t *testing.T) {
 	assert := assert.New(t)
 	// error test
+	projectPath := "../example"
 	swaggerGo := "../example/swagger.go.err"
-	as, err := NewAppSuite(swaggerGo)
+	dev := true
+	as, err := NewAppSuite(projectPath, swaggerGo, dev)
 	assert.Nil(as)
 	assert.NotNil(err)
 }
@@ -20,8 +22,10 @@ func TestErrorPath(t *testing.T) {
 func TestAppSuite(t *testing.T) {
 	assert := assert.New(t)
 	// error test
+	projectPath := "../example"
 	swaggerGo := "../example/swagger.go"
-	as, err := NewAppSuite(swaggerGo)
+	dev := true
+	as, err := NewAppSuite(projectPath, swaggerGo, dev)
 	assert.Nil(err)
 	assert.NotNil(as)
 	suite.Run(t, as)
@@ -32,9 +36,9 @@ type AppSuite struct {
 	*swagger.Swagger
 }
 
-func NewAppSuite(swaggerGo string) (*AppSuite, error) {
+func NewAppSuite(projectPath, swaggerGo string, dev bool) (*AppSuite, error) {
 	as := &AppSuite{Swagger: swagger.NewV2()}
-	if err := doc2Swagger(swaggerGo, as.Swagger); err != nil {
+	if err := doc2Swagger(projectPath, swaggerGo, dev, as.Swagger); err != nil {
 		return nil, err
 	}
 	return as, nil

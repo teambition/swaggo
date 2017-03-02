@@ -27,7 +27,9 @@ func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
 			tag.Description = c
 		case tagTrimPrefixAndSpace(&c, ctrlPrivate):
 			// private controller
-			return
+			if !devMode {
+				return
+			}
 		}
 	}
 	if ctrl.tagName == "" {

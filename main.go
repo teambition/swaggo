@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/teambition/swaggo/parser"
 	"github.com/urfave/cli"
 )
 
 const (
-	AppVersion = "v0.1.0"
+	AppVersion = "v0.1.1"
 )
 
 func main() {
@@ -20,6 +19,10 @@ func main() {
 	app.HelpName = "swaggo"
 	app.Usage = "a utility for convert go annotations to swagger-doc"
 	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "dev, d",
+			Usage: "develop mode",
+		},
 		cli.StringFlag{
 			Name:  "swagger, s",
 			Value: "./swagger.go",
@@ -42,7 +45,11 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		if err := parser.Parser(c.String("swagger"), filepath.Join(c.String("project"), "vendor"), c.String("output"), c.String("type")); err != nil {
+		if err := parser.Parser(c.String("project"),
+			c.String("swagger"),
+			c.String("output"),
+			c.String("type"),
+			c.Bool("dev")); err != nil {
 			return fmt.Errorf("[Error] %v ", err)
 		}
 		return nil

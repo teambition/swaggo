@@ -2,18 +2,70 @@ package parser
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/teambition/swaggo/swagger"
 	yaml "gopkg.in/yaml.v2"
 )
 
-func doc2Swagger(swaggerGo, vendor string, sw *swagger.Swagger) error {
+func Parser(projectPath, swaggerGo, output, t string, dev bool) (err error) {
+	sw := swagger.NewV2()
+	if err = doc2Swagger(projectPath, swaggerGo, dev, sw); err != nil {
+		return
+	}
+	var (
+		data     []byte
+		filename string
+	)
+
+	switch t {
+	case "json":
+		filename = jsonFile
+		data, err = json.Marshal(sw)
+	case "yaml":
+		filename = yamlFile
+		data, err = yaml.Marshal(sw)
+	default:
+		err = fmt.Errorf("missing swagger file type(%s), only support in (json, yaml)", t)
+	}
+	if err != nil {
+		return
+	}
+	return ioutil.WriteFile(filepath.Join(output, filename), data, 0644)
+}
+
+var (
+	vendor  = ""
+	goPaths = []string{}
+	goRoot  = ""
+	devMode bool
+)
+
+func doc2Swagger(projectPath, swaggerGo string, dev bool, sw *swagger.Swagger) error {
+	// init
+	goPaths = filepath.SplitList(os.Getenv("GOPATH"))
+	if len(goPaths) == 0 {
+		return errors.New("GOPATH environment variable is not set or empty")
+	}
+	goRoot = runtime.GOROOT()
+	if goRoot == "" {
+		return errors.New("GOROOT environment variable is not set or empty")
+	}
+	absPPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	vendor = filepath.Join(absPPath, "vendor")
+	devMode = dev
+
 	f, err := parser.ParseFile(token.NewFileSet(), swaggerGo, nil, parser.ParseComments)
 	if err != nil {
 		return err
@@ -68,7 +120,7 @@ func doc2Swagger(swaggerGo, vendor string, sw *swagger.Swagger) error {
 	// // @....
 	for _, im := range f.Imports {
 		importPath := strings.Trim(im.Path.Value, "\"")
-		p, err := newResoucre(importPath, vendor, true)
+		p, err := newResoucre(importPath, true)
 		if err != nil {
 			return err
 		}
@@ -77,35 +129,4 @@ func doc2Swagger(swaggerGo, vendor string, sw *swagger.Swagger) error {
 		}
 	}
 	return nil
-}
-
-func Parser(swaggerGo, vendor, output, t string) error {
-	// check vendor
-	absVendor, err := filepath.Abs(vendor)
-	if err != nil {
-		return err
-	}
-	sw := swagger.NewV2()
-	if err = doc2Swagger(swaggerGo, absVendor, sw); err != nil {
-		return err
-	}
-	var (
-		data     []byte
-		filename string
-	)
-
-	switch t {
-	case "json":
-		filename = jsonFile
-		data, err = json.Marshal(sw)
-	case "yaml":
-		filename = yamlFile
-		data, err = yaml.Marshal(sw)
-	default:
-		err = fmt.Errorf("missing swagger file type(%s), only support in (json, yaml)", t)
-	}
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(output, filename), data, 0644)
 }

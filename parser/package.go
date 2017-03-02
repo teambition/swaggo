@@ -26,13 +26,13 @@ type pkg struct {
 }
 
 // newPackage
-func newPackage(localName, importPath, vendor string, justGoPath bool) (p *pkg, err error) {
+func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err error) {
 	absPath := ""
 	ok := false
 	if justGoPath {
-		absPath, ok = absPathFromGoPath(importPath, vendor)
+		absPath, ok = absPathFromGoPath(importPath)
 	} else {
-		if absPath, ok = absPathFromGoPath(importPath, vendor); !ok {
+		if absPath, ok = absPathFromGoPath(importPath); !ok {
 			absPath, ok = absPathFromGoRoot(importPath)
 		}
 	}
@@ -125,7 +125,7 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 		default:
 			// import m "lib/math"         m.Sin
 		}
-		if importPkg, err := newPackage(localName, importPath, p.vendor, false); err != nil {
+		if importPkg, err := newPackage(localName, importPath, false); err != nil {
 			return nil, err
 		} else {
 			pkgs = append(pkgs, importPkg)

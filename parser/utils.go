@@ -4,7 +4,6 @@ import (
 	"go/ast"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"unicode"
@@ -36,18 +35,15 @@ func str2RealType(s string, typ string) (ret interface{}, err error) {
 	return
 }
 
-func absPathFromGoPath(importPath, vendor string) (string, bool) {
-	vendorImport := filepath.Join(vendor, importPath)
-	if fileExists(vendorImport) {
-		return vendorImport, true
-	}
-	// check GOPATH
-	goPaths := os.Getenv("GOPATH")
-	if goPaths == "" {
-		panic("GOPATH environment variable is not set or empty")
+func absPathFromGoPath(importPath string) (string, bool) {
+	if vendor != "" {
+		vendorImport := filepath.Join(vendor, importPath)
+		if fileExists(vendorImport) {
+			return vendorImport, true
+		}
 	}
 	// find absolute path
-	for _, goPath := range filepath.SplitList(goPaths) {
+	for _, goPath := range goPaths {
 		wg, _ := filepath.EvalSymlinks(filepath.Join(goPath, "src", importPath))
 		if fileExists(wg) {
 			return wg, true
@@ -57,10 +53,6 @@ func absPathFromGoPath(importPath, vendor string) (string, bool) {
 }
 
 func absPathFromGoRoot(importPath string) (string, bool) {
-	goRoot := runtime.GOROOT()
-	if goRoot == "" {
-		panic("GOROOT environment variable is not set or empty")
-	}
 	wg, _ := filepath.EvalSymlinks(filepath.Join(goRoot, "src", importPath))
 	if fileExists(wg) {
 		return wg, true

@@ -13,7 +13,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func doc2Swagger(swaggerGo string, sw *swagger.Swagger) error {
+func doc2Swagger(swaggerGo, vendor string, sw *swagger.Swagger) error {
 	f, err := parser.ParseFile(token.NewFileSet(), swaggerGo, nil, parser.ParseComments)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func doc2Swagger(swaggerGo string, sw *swagger.Swagger) error {
 	// // @....
 	for _, im := range f.Imports {
 		importPath := strings.Trim(im.Path.Value, "\"")
-		p, err := newResoucre(importPath, true)
+		p, err := newResoucre(importPath, vendor, true)
 		if err != nil {
 			return err
 		}
@@ -79,10 +79,14 @@ func doc2Swagger(swaggerGo string, sw *swagger.Swagger) error {
 	return nil
 }
 
-func Parser(swaggerGo, output, t string) error {
-	sw := swagger.NewV2()
-	err := doc2Swagger(swaggerGo, sw)
+func Parser(swaggerGo, vendor, output, t string) error {
+	// check vendor
+	absVendor, err := filepath.Abs(vendor)
 	if err != nil {
+		return err
+	}
+	sw := swagger.NewV2()
+	if err = doc2Swagger(swaggerGo, absVendor, sw); err != nil {
 		return err
 	}
 	var (

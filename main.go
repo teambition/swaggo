@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/teambition/swaggo/parser"
 	"github.com/urfave/cli"
 )
 
 const (
-	AppVersion = "v0.0.7"
+	AppVersion = "v0.1.0"
 )
 
 func main() {
@@ -25,6 +26,11 @@ func main() {
 			Usage: "where is the swagger.go file",
 		},
 		cli.StringFlag{
+			Name:  "project, p",
+			Value: "./",
+			Usage: "where is the project",
+		},
+		cli.StringFlag{
 			Name:  "output, o",
 			Value: "./",
 			Usage: "the output of the swagger file that was generated",
@@ -36,7 +42,7 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		if err := parser.Parser(c.String("swagger"), c.String("output"), c.String("type")); err != nil {
+		if err := parser.Parser(c.String("swagger"), filepath.Join(c.String("project"), "vendor"), c.String("output"), c.String("type")); err != nil {
 			return fmt.Errorf("[Error] %v ", err)
 		}
 		return nil

@@ -17,6 +17,7 @@ type pkg struct {
 	localName  string // alias name of package include "."
 	importPath string // the import package name
 	absPath    string // whereis package in filesystem
+	vendor     string // project vendor for lookup package
 	// filename -> import pkgs
 	importPkgs map[string][]*pkg
 	// model name -> model
@@ -25,13 +26,13 @@ type pkg struct {
 }
 
 // newPackage
-func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err error) {
+func newPackage(localName, importPath, vendor string, justGoPath bool) (p *pkg, err error) {
 	absPath := ""
 	ok := false
 	if justGoPath {
-		absPath, ok = absPathFromGoPath(importPath)
+		absPath, ok = absPathFromGoPath(importPath, vendor)
 	} else {
-		if absPath, ok = absPathFromGoPath(importPath); !ok {
+		if absPath, ok = absPathFromGoPath(importPath, vendor); !ok {
 			absPath, ok = absPathFromGoRoot(importPath)
 		}
 	}
@@ -55,6 +56,7 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 			Package:    p,
 			localName:  localName,
 			importPath: importPath,
+			vendor:     vendor,
 			absPath:    absPath,
 			importPkgs: map[string][]*pkg{},
 			models:     []*model{},
@@ -123,7 +125,7 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 		default:
 			// import m "lib/math"         m.Sin
 		}
-		if importPkg, err := newPackage(localName, importPath, false); err != nil {
+		if importPkg, err := newPackage(localName, importPath, p.vendor, false); err != nil {
 			return nil, err
 		} else {
 			pkgs = append(pkgs, importPkg)

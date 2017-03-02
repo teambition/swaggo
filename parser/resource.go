@@ -16,8 +16,8 @@ type resource struct {
 }
 
 // newResoucre an api definition
-func newResoucre(importPath string, justGoPath bool) (*resource, error) {
-	p, err := newPackage("_", importPath, justGoPath)
+func newResoucre(importPath, vendor string, justGoPath bool) (*resource, error) {
+	p, err := newPackage("_", importPath, vendor, justGoPath)
 	if err != nil {
 		return nil, err
 	}

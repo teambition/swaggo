@@ -47,11 +47,15 @@ func (c *Context) WriteResponse(response interface{}) {
 //
 // Param:param_name/param_type/data_type/required(optional)/describtion(optional)/defaul_value(optional)
 // value == "-" means optional
-// @Param some_id path int true "Some ID" 123
-// @Param some_body body string - "Request Body"
-// @Param body body string - "Request Body"
-// @Param array query []string - "Array"
-// @Param array_array query [][]string - "Array Array"
+// form and body params cann't coexist
+// path param must be required
+// if file type param exsited, all params must be form except path and query
+// @Param path_param path int - "Some ID" 123
+// @Param form_param form file - "Request Form"
+// @Param body_param body string - "Request Body"
+// @Param body_param_2 body string - "Request Body"
+// @Param query_param query []string - "Array"
+// @Param query_param_2 query [][]string - "Array Array"
 //
 // Success:response_code/data_type(optional)/describtion(optional)
 // @Success 200  string "Success"

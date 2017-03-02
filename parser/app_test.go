@@ -74,7 +74,7 @@ func (suite *AppSuite) TestSwagger() {
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, router.Get.Produces)
 
 	assert.Equal("path", router.Get.Parameters[0].In)
-	assert.Equal("some_id", router.Get.Parameters[0].Name)
+	assert.Equal("path_param", router.Get.Parameters[0].Name)
 	assert.Equal("Some ID", router.Get.Parameters[0].Description)
 	assert.Equal(true, router.Get.Parameters[0].Required)
 	assert.Equal("integer", router.Get.Parameters[0].Type)

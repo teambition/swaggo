@@ -23,33 +23,33 @@ func doc2Swagger(swaggerGo string, sw *swagger.Swagger) error {
 		for _, c := range f.Comments {
 			for _, s := range strings.Split(c.Text(), "\n") {
 				switch {
-				case tagTrimPrefixAndSpace(&s, apiVersion):
+				case tagTrimPrefixAndSpace(&s, appVersion):
 					sw.Infos.Version = s
-				case tagTrimPrefixAndSpace(&s, apiTitle):
+				case tagTrimPrefixAndSpace(&s, appTitle):
 					sw.Infos.Title = s
-				case tagTrimPrefixAndSpace(&s, apiDesc):
+				case tagTrimPrefixAndSpace(&s, appDesc):
 					sw.Infos.Description = s
-				case tagTrimPrefixAndSpace(&s, apiTermsOfServiceUrl):
+				case tagTrimPrefixAndSpace(&s, appTermsOfServiceUrl):
 					sw.Infos.TermsOfService = s
-				case tagTrimPrefixAndSpace(&s, apiContact):
+				case tagTrimPrefixAndSpace(&s, appContact):
 					sw.Infos.Contact.EMail = s
-				case tagTrimPrefixAndSpace(&s, apiName):
+				case tagTrimPrefixAndSpace(&s, appName):
 					sw.Infos.Contact.Name = s
-				case tagTrimPrefixAndSpace(&s, apiURL):
+				case tagTrimPrefixAndSpace(&s, appURL):
 					sw.Infos.Contact.URL = s
-				case tagTrimPrefixAndSpace(&s, apiLicenseUrl):
+				case tagTrimPrefixAndSpace(&s, appLicenseUrl):
 					sw.Infos.License.URL = s
-				case tagTrimPrefixAndSpace(&s, apiLicense):
+				case tagTrimPrefixAndSpace(&s, appLicense):
 					sw.Infos.License.Name = s
-				case tagTrimPrefixAndSpace(&s, apiSchemes):
+				case tagTrimPrefixAndSpace(&s, appSchemes):
 					sw.Schemes = strings.Split(s, ",")
-				case tagTrimPrefixAndSpace(&s, apiHost):
+				case tagTrimPrefixAndSpace(&s, appHost):
 					sw.Host = s
-				case tagTrimPrefixAndSpace(&s, apiBasePath):
+				case tagTrimPrefixAndSpace(&s, appBasePath):
 					sw.BasePath = s
-				case tagTrimPrefixAndSpace(&s, apiConsumes):
+				case tagTrimPrefixAndSpace(&s, appConsumes):
 					sw.Consumes = contentTypeByDoc(s)
-				case tagTrimPrefixAndSpace(&s, apiProduces):
+				case tagTrimPrefixAndSpace(&s, appProduces):
 					sw.Produces = contentTypeByDoc(s)
 				}
 			}

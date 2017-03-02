@@ -27,21 +27,21 @@ const (
 
 const (
 	docPrefix = "@"
-	// api tag
-	apiVersion           = "@Version"
-	apiTitle             = "@Title"
-	apiDesc              = "@Description"
-	apiTermsOfServiceUrl = "@TermsOfServiceUrl"
-	apiContact           = "@Contact"
-	apiName              = "@Name"
-	apiURL               = "@URL"
-	apiLicenseUrl        = "@LicenseUrl"
-	apiLicense           = "@License"
-	apiSchemes           = "@Schemes"
-	apiHost              = "@Host"
-	apiBasePath          = "@BasePath"
-	apiConsumes          = "@Consumes"
-	apiProduces          = "@Produces"
+	// app tag
+	appVersion           = "@Version"
+	appTitle             = "@Title"
+	appDesc              = "@Description"
+	appTermsOfServiceUrl = "@TermsOfServiceUrl"
+	appContact           = "@Contact"
+	appName              = "@Name"
+	appURL               = "@URL"
+	appLicenseUrl        = "@LicenseUrl"
+	appLicense           = "@License"
+	appSchemes           = "@Schemes"
+	appHost              = "@Host"
+	appBasePath          = "@BasePath"
+	appConsumes          = "@Consumes"
+	appProduces          = "@Produces"
 	// controller tag
 	ctrlPrivate = "@Private"
 	ctrlName    = "@Name"
@@ -64,6 +64,14 @@ const (
 	query  = "query"
 	header = "header"
 	path   = "path"
-	form   = "formData"
+	form   = "form"
 	body   = "body"
 )
+
+var paramType = map[string]string{
+	query:  "query",
+	header: "header",
+	path:   "path",
+	form:   "formData",
+	body:   "body",
+}

@@ -127,3 +127,21 @@ func contentTypeByDoc(s string) []string {
 	}
 	return result
 }
+
+// subset returns true if the first array is completely
+// contained in the second array. There must be at least
+// the same number of duplicate values in second as there
+// are in first.
+func subset(first, second []string) bool {
+	set := make(map[string]struct{})
+	for _, value := range second {
+		set[value] = struct{}{}
+	}
+
+	for _, value := range first {
+		if _, found := set[value]; !found {
+			return false
+		}
+	}
+	return true
+}

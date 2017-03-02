@@ -25,6 +25,7 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 	case *ast.Ident, *ast.SelectorExpr:
 		schema := fmt.Sprint(t)
 		r = &result{}
+		// []SomeStruct
 		if strings.HasPrefix(schema, "[]") {
 			schema = schema[2:]
 			r.kind = arrayType

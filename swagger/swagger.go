@@ -66,7 +66,7 @@ type Operation struct {
 	Consumes    []string            `json:"consumes,omitempty" yaml:"consumes,omitempty"`
 	Produces    []string            `json:"produces,omitempty" yaml:"produces,omitempty"`
 	Schemes     []string            `json:"schemes,omitempty" yaml:"schemes,omitempty"`
-	Parameters  []Parameter         `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+	Parameters  []*Parameter        `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 	Responses   map[string]Response `json:"responses,omitempty" yaml:"responses,omitempty"`
 	Deprecated  bool                `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 }
@@ -125,7 +125,7 @@ type Propertie struct {
 
 // Response as they are returned from executing this operation.
 type Response struct {
-	Description string  `json:"description,omitempty" yaml:"description,omitempty"`
+	Description string  `json:"description" yaml:"description"`
 	Schema      *Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
 	Ref         string  `json:"$ref,omitempty" yaml:"$ref,omitempty"`
 }

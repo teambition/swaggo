@@ -27,6 +27,7 @@ func (m *method) prettyErr(format string, e ...interface{}) error {
 	return fmt.Errorf(f, e...)
 }
 
+// parse Parse the api method annotations
 func (m *method) parse(s *swagger.Swagger) (err error) {
 	var routerPath, HTTPMethod string
 	tagName := m.ctrl.tagName
@@ -77,7 +78,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 				err = m.prettyErr("unknown param(%s) type(%s), type must in(query, header, path, form, body)", p[0], p[1])
 				return
 			}
-			para.In = p[1]
+			para.In = paramType[p[1]]
 			if err = m.ctrl.r.parseParam(s, &para, m.filename, p[2]); err != nil {
 				return
 			}
@@ -101,20 +102,28 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 					}
 				}
 			}
-			opt.Parameters = append(opt.Parameters, para)
+			opt.Parameters = append(opt.Parameters, &para)
 		case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
 			sr := swagger.Response{Schema: &swagger.Schema{}}
 			p := getparams(c)
-			if len(p) != 3 {
+			switch len(p) {
+			case 1:
+				// 204
+			case 2:
+				// 200 string
+				// 200 -
+				if p[1] != "-" {
+					if err = m.ctrl.r.parseSchema(s, sr.Schema, m.filename, p[1]); err != nil {
+						return
+					}
+				}
+			case 3:
+				sr.Description = p[2]
+			default:
 				err = m.prettyErr("response (%s) format error, need(code, type, description)", c)
 				return
 			}
-			if p[1] != "-" {
-				if err = m.ctrl.r.parseSchema(s, sr.Schema, m.filename, p[1]); err != nil {
-					return
-				}
-			}
-			sr.Description = p[2]
+
 			opt.Responses[p[0]] = sr
 		case tagTrimPrefixAndSpace(&c, methodDeprecated):
 			opt.Deprecated, _ = strconv.ParseBool(c)
@@ -139,24 +148,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 	}
 
 	if routerPath != "" && !private {
-		// check body count
-		hasBody := false
-		for _, v := range opt.Parameters {
-			if v.In == body {
-				if v.Name != body {
-					fmt.Println("[Warnning] ", m.prettyErr("body-type parameter(%s)'s name shuold be `body`", v.Name))
-				}
-				if hasBody {
-					fmt.Println("[Warnning] ", m.prettyErr("has more than one body-type parameter, not all body works"))
-					break
-				} else {
-					hasBody = true
-				}
-			}
-		}
-		if opt.OperationID == "" {
-			opt.OperationID = tagName + "." + m.name
-		}
+		m.paramCheck(&opt)
 		if s.Paths == nil {
 			s.Paths = map[string]*swagger.Item{}
 		}
@@ -185,4 +177,52 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 		s.Paths[routerPath] = item
 	}
 	return
+}
+
+// paramCheck Verify the validity of parametes
+func (m *method) paramCheck(opt *swagger.Operation) {
+	// swagger ui url (unique)
+	if opt.OperationID == "" {
+		opt.OperationID = m.ctrl.tagName + "." + m.name
+	}
+
+	hasFile, hasBody, hasForm, bodyWarn := false, false, false, false
+	for _, v := range opt.Parameters {
+		if v.Type == "file" && !hasFile {
+			hasFile = true
+		}
+		switch v.In {
+		case paramType[form]:
+			hasForm = true
+		case paramType[body]:
+			if hasBody {
+				if !bodyWarn {
+					fmt.Println("[Warnning]", m.prettyErr("more than one body-type existed in this method"))
+					bodyWarn = true
+				}
+			} else {
+				hasBody = true
+			}
+		case paramType[path]:
+			if !v.Required {
+				// path-type parameter must be required
+				v.Required = true
+				fmt.Println("[Warnning]", m.prettyErr("path-type parameter(%s) must be required", v.Name))
+			}
+		}
+	}
+	if hasBody && hasForm {
+		fmt.Println("[Warnning]", m.prettyErr("body-type and form-type cann't coexist"))
+	}
+	// If type is "file", the consumes MUST be
+	// either "multipart/form-data", " application/x-www-form-urlencoded"
+	// or both and the parameter MUST be in "formData".
+	if hasFile {
+		if hasBody {
+			fmt.Println("[Warnning]", m.prettyErr("file-data-type and body-type cann't coexist"))
+		}
+		if !(len(opt.Consumes) == 0 || subset(opt.Consumes, []string{contentType[formType], contentType[formDataType]})) {
+			fmt.Println("[Warnning]", m.prettyErr("file-data-type existed and this api's consumes must in(form, formData)"))
+		}
+	}
 }

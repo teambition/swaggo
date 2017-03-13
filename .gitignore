@@ -2,3 +2,10 @@ swaggo
 example/example
 helper/
 .DS_Store
+.vscode/
+.idea/
+.spread/
+*.coverprofile
+debug
+swagger.json
+swagger.yaml

@@ -159,23 +159,32 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 		if !ok {
 			item = &swagger.Item{}
 		}
+		var oldOpt *swagger.Operation
 		switch HTTPMethod {
 		case "GET":
+			oldOpt = item.Get
 			item.Get = &opt
 		case "POST":
+			oldOpt = item.Post
 			item.Post = &opt
 		case "PUT":
+			oldOpt = item.Put
 			item.Put = &opt
 		case "PATCH":
+			oldOpt = item.Patch
 			item.Patch = &opt
 		case "DELETE":
+			oldOpt = item.Delete
 			item.Delete = &opt
 		case "HEAD":
+			oldOpt = item.Head
 			item.Head = &opt
 		case "OPTIONS":
+			oldOpt = item.Options
 			item.Options = &opt
 		}
-		if s.Paths == nil {
+		if oldOpt != nil {
+			fmt.Println("[Warnning]", m.prettyErr("router(%s %s) has existed in controller(%s)", HTTPMethod, routerPath, oldOpt.Tags[0]))
 		}
 		s.Paths[routerPath] = item
 	}

@@ -122,13 +122,13 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 					continue
 				}
 				name = jsonTag[0]
-				// swaggo:"(desc),(required),(default)"
+				// swaggo:"(required),(desc),(default)"
 				swaggoTag := stag.Get("swaggo")
 				tmp := strings.Split(swaggoTag, ",")
 				for k, v := range tmp {
 					switch k {
 					case 0:
-						if v != "" && v != "-" {
+						if v == "true" {
 							ss.Required = append(ss.Required, name)
 						}
 					case 1:

@@ -42,7 +42,7 @@ type StructureWithEmbededPointer struct {
 
 type StructureWithAnonymousStructure struct {
 	Anonymous struct {
-		B string
+		Name string
 	}
 }
 

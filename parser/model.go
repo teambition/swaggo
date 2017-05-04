@@ -93,7 +93,7 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 				// anonymous struct
 				if _, ok := f.Type.(*ast.StructType); ok {
 					tmpM := *m
-					tmpM.name = f.Names[0].String()
+					tmpM.name = fmt.Sprintf("_anonymous_%s", f.Names[0].String())
 					if tmpR, err = tmpM.parse(s, f.Type); err != nil {
 						return
 					}

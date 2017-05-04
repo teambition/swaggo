@@ -90,8 +90,17 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 					sp   swagger.Propertie
 					tmpR *result
 				)
-				if tmpR, err = m.parse(s, f.Type); err != nil {
-					return
+				// anonymous struct
+				if _, ok := f.Type.(*ast.StructType); ok {
+					tmpM := *m
+					tmpM.name = f.Names[0].String()
+					if tmpR, err = tmpM.parse(s, f.Type); err != nil {
+						return
+					}
+				} else {
+					if tmpR, err = m.parse(s, f.Type); err != nil {
+						return
+					}
 				}
 				if f.Names == nil {
 					// result must be a struct

@@ -40,6 +40,12 @@ type StructureWithEmbededPointer struct {
 	*StructureWithSlice
 }
 
+type StructureWithAnonymousStructure struct {
+	Anonymous struct {
+		B string
+	}
+}
+
 type APIError struct {
 	ErrorCode    int
 	ErrorMessage string

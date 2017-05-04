@@ -58,13 +58,14 @@ func (c *Context) WriteResponse(response interface{}) {
 // @Param query_param_2 query [][]string - "Array Array"
 //
 // Success:response_code/data_type(optional)/describtion(optional)
-// @Success 200  string "Success"
-// @Success 201  SubStructDot "Success"
-// @Success 202  sub.SubStructAlias "Success"
+// @Success 200 string "Success"
+// @Success 201 SubStructDot "Success"
+// @Success 202 sub.SubStructAlias "Success"
+// @Success 203 StructureWithAnonymousStructure
 //
 // Failure:response_code/data_type(optional)/describtion(optional)
-// @Failure 400  APIError "We need ID!!"
-// @Failure 404  APIError "Can not find ID"
+// @Failure 400 APIError "We need ID!!"
+// @Failure 404 APIError "Can not find ID"
 //
 // Router:http_method/api_path
 // @Router GET /testapi/get-string-by-int/{some_id}

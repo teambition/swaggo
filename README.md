@@ -1,4 +1,4 @@
-Swaggo - `v0.1.3`
+Swaggo - `v0.1.4`
 =====
 Parse annotations from Go code and generate [Swagger Documentation](http://swagger.io/)
 

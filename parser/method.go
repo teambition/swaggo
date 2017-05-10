@@ -53,7 +53,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 			}
 		case tagTrimPrefixAndSpace(&c, methodSummary):
 			if opt.Summary != "" {
-				opt.Summary += "\n" + c
+				opt.Summary += "<br>" + c
 			} else {
 				opt.Summary = c
 			}

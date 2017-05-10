@@ -26,7 +26,6 @@ type model struct {
 	filename string // appear in which file
 	p        *pkg   // appear in which package
 	f        feature
-	isMember bool // is a member of struct
 }
 
 func newModel(filename, schema string, p *pkg) *model {
@@ -46,15 +45,15 @@ func (m *model) newModel(e ast.Expr) *model {
 	}
 }
 
-// inhert the feature from other model
-func (m *model) inhert(other *model) *model {
-	m.f = other.f
-	m.isMember = other.isMember
-	return m
+func (m *model) clone(e ast.Expr) *model {
+	nm := *m
+	nm.name = ""
+	nm.Expr = e
+	return &nm
 }
 
-func (m *model) member() *model {
-	m.isMember = true
+func (m *model) inhert(other *model) *model {
+	m.f = other.f
 	return m
 }
 
@@ -72,7 +71,7 @@ func (m *model) anonymousStruct() *model {
 func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 	switch t := m.Expr.(type) {
 	case *ast.StarExpr:
-		return m.newModel(t.X).inhert(m).parse(s)
+		return m.clone(t.X).parse(s)
 	case *ast.Ident, *ast.SelectorExpr:
 		schema := fmt.Sprint(t)
 		r = &result{}
@@ -80,14 +79,14 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		if strings.HasPrefix(schema, "[]") {
 			schema = schema[2:]
 			r.kind = arrayKind
-			r.item, err = m.newModel(ast.NewIdent(schema)).parse(s)
+			r.item, err = m.clone(ast.NewIdent(schema)).parse(s)
 			return
 		}
 		// map[string]SomeStruct
 		if strings.HasPrefix(schema, "map[string]") {
 			schema = schema[11:]
 			r.kind = mapKind
-			r.item, err = m.newModel(ast.NewIdent(schema)).parse(s)
+			r.item, err = m.clone(ast.NewIdent(schema)).parse(s)
 			return
 		}
 		// &{foo Bar} to foo.Bar
@@ -109,10 +108,10 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		}
 	case *ast.ArrayType:
 		r = &result{kind: arrayKind}
-		r.item, err = m.newModel(t.Elt).inhert(m).parse(s)
+		r.item, err = m.clone(t.Elt).parse(s)
 	case *ast.MapType:
 		r = &result{kind: mapKind}
-		r.item, err = m.newModel(t.Value).inhert(m).parse(s)
+		r.item, err = m.clone(t.Value).parse(s)
 	case *ast.InterfaceType:
 		return &result{kind: interfaceKind}, nil
 	case *ast.StructType:
@@ -121,24 +120,21 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		// type A struct {
 		//     B struct {}
 		// }
-		if m.isMember && m.f != anonMemberFeature {
-			m.anonymousStruct()
-		}
 		var key string
-		switch m.f {
-		case anonStructFeature:
-		default:
+		if m.name == "" {
+			m.anonymousStruct()
+		} else {
+			key = m.name
+			r.title = m.name
 			// find schema cache
 			// check if existed
 			if s.Definitions == nil {
 				s.Definitions = map[string]*swagger.Schema{}
-			}
-
-			key = m.name
-			r.title = m.name
-			if ips, ok := cachedModels[m.name]; ok {
+			} else if ips, ok := cachedModels[m.name]; ok {
+				exsited := false
 				for k, v := range ips {
-					if m.p.importPath == v.path {
+					exsited = m.p.importPath == v.path
+					if exsited {
 						if k != 0 {
 							key = fmt.Sprintf("%s_%d", m.name, k)
 						}
@@ -146,22 +142,32 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 							r = v.r
 							return
 						}
+						if _, ok := s.Definitions[key]; ok {
+							r.ref = "#/definitions/" + key
+							return
+						} else {
+							err = fmt.Errorf("the key(%s) must existed in swagger's definitions", key)
+							return
+						}
 						break
 					}
 				}
+				if !exsited {
+					ips = append(ips, &kv{m.p.importPath, r})
+					cachedModels[m.name] = ips
+					if len(ips) > 1 {
+						key = fmt.Sprintf("%s_%d", m.name, len(ips)-1)
+					}
+				}
 			} else {
-				cachedModels[m.name] = []*kv{}
-			}
-			if _, ok := s.Definitions[key]; ok {
-				r.ref = "#/definitions/" + key
-				return
+				cachedModels[m.name] = []*kv{&kv{m.p.importPath, r}}
 			}
 		}
 
 		for _, f := range t.Fields.List {
 			var (
 				childR *result
-				nm     = m.newModel(f.Type).member()
+				nm     = m.newModel(f.Type)
 				name   string
 			)
 
@@ -205,8 +211,15 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 					}
 					if !hasKey {
 						r.items[k1] = v1
+						for _, v := range childR.required {
+							if v == k1 {
+								r.required = append(r.required, v)
+								break
+							}
+						}
 					}
 				}
+
 			} else {
 				r.items[name] = childR
 			}
@@ -218,7 +231,6 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 				return nil, err
 			}
 			s.Definitions[key] = ss
-			cachedModels[m.name] = append(cachedModels[m.name], &kv{m.p.importPath, r})
 			if m.f != anonMemberFeature {
 				r.ref = "#/definitions/" + key
 			}
@@ -228,7 +240,7 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 }
 
 // cachedModels
-// model name -> import paths
+// model name -> import path and result
 var cachedModels = map[string][]*kv{}
 
 type kv struct {
@@ -304,8 +316,10 @@ func (r *result) parseSchema(ss *swagger.Schema) {
 	ss.Title = r.title
 	switch r.kind {
 	case innerKind:
+		ss.Description = r.desc
 		ss.Type = r.sType
 		ss.Format = r.sFormat
+		ss.Default = r.def
 	case objectKind:
 		ss.Type = "object"
 		if r.ref != "" {
@@ -337,6 +351,8 @@ func (r *result) parseSchema(ss *swagger.Schema) {
 func (r *result) parsePropertie(sp *swagger.Propertie) {
 	switch r.kind {
 	case innerKind:
+		sp.Description = r.desc
+		sp.Default = r.def
 		sp.Type = r.sType
 		sp.Format = r.sFormat
 	case arrayKind:

@@ -71,8 +71,8 @@ func (suite *AppSuite) TestSwagger() {
 	assert.NotNil(router)
 	assert.NotNil(router.Get)
 	assert.Equal([]string{"testapi"}, router.Get.Tags)
-	assert.Equal("get string by ID summary\nmulti line", router.Get.Summary)
-	assert.Equal("get string by ID desc\nmulti line", router.Get.Description)
+	assert.Equal("get string by ID summary<br>multi line", router.Get.Summary)
+	assert.Equal("get string by ID desc<br>multi line", router.Get.Description)
 	assert.Equal("testapi.GetStringByInt", router.Get.OperationID)
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, router.Get.Consumes)
 	assert.Equal([]string{"application/json", "text/plain", "application/xml", "text/html"}, router.Get.Produces)
@@ -112,18 +112,19 @@ func (suite *AppSuite) TestSwagger() {
 	assert.Equal("string", apiError.Properties["ErrorMessage"].Type)
 
 	// inherit
-	simpleStruct := suite.Definitions["SimpleStructure_1"]
-	assert.NotNil(simpleStruct)
-	assert.Equal("SimpleStructure", simpleStruct.Title)
-	assert.Equal("object", simpleStruct.Type)
-	assert.Equal([]string{"id", "name", "age", "ctime", "sub", "i"}, simpleStruct.Required)
-	assert.Equal("the user age", simpleStruct.Properties["age"].Description)
-	assert.Equal("18", simpleStruct.Properties["age"].Default)
-	assert.Equal("integer", simpleStruct.Properties["age"].Type)
-	assert.Equal("int32", simpleStruct.Properties["age"].Format)
+	inhertStruct := suite.Definitions["StructureWithEmbededStructure"]
+	assert.NotNil(inhertStruct)
+	assert.Equal("StructureWithEmbededStructure", inhertStruct.Title)
+	assert.Equal("object", inhertStruct.Type)
 
-	assert.Equal("#/definitions/SimpleStructure", simpleStruct.Properties["sub"].Ref)
-	assert.Equal("object", simpleStruct.Properties["sub"].Type)
+	// assert.True(reflect.DeepEqual([]string{"id", "name", "age", "ctime", "sub", "i"}, inhertStruct.Required))
+	assert.Equal("the user age", inhertStruct.Properties["age"].Description)
+	assert.Equal(18, inhertStruct.Properties["age"].Default)
+	assert.Equal("integer", inhertStruct.Properties["age"].Type)
+	assert.Equal("int32", inhertStruct.Properties["age"].Format)
+
+	assert.Equal("#/definitions/SimpleStructure_1", inhertStruct.Properties["sub"].Ref)
+	assert.Equal("object", inhertStruct.Properties["sub"].Type)
 
 	// tags
 	assert.Equal(1, len(suite.Tags))

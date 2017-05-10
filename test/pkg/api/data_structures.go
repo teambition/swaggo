@@ -19,6 +19,7 @@ type SimpleStructure struct {
 	CTime time.Time                  `json:"ctime" swaggo:"true,create time"`
 	Sub   subpackage.SimpleStructure `json:"sub" swaggo:"true"`
 	I     TypeInterface              `json:"i" swaggo:"true"`
+	T     TypeString                 `json:"t"`
 	Map   map[string]string          `json:"map", swaggo:",map type"`
 }
 
@@ -34,7 +35,7 @@ type StructureWithSlice struct {
 
 // hello
 type StructureWithEmbededStructure struct {
-	StructureWithSlice
+	SimpleStructure
 }
 type StructureWithEmbededPointer struct {
 	*StructureWithSlice

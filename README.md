@@ -34,6 +34,7 @@ swaggo --help
 
 [Kpass](https://github.com/seccom/kpass#swagger-document)
 
-### TODO
+### TODO(In the near future)
 
 - [ ] Support API without Controller structure 
+- [ ] Explain declarative comments format with english 

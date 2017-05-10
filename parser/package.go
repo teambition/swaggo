@@ -67,7 +67,7 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 
 // parseSchema Parse schema in this code file
 func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, schema string) (err error) {
-	r, err := newModel(filename, schema, p).parse(s)
+	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, sche
 
 // parseParam Parse param in this code file
 func (p *pkg) parseParam(s *swagger.Swagger, sp *swagger.Parameter, filename, schema string) (err error) {
-	r, err := newModel(filename, schema, p).parse(s)
+	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
 	if err != nil {
 		return err
 	}

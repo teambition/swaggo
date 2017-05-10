@@ -11,6 +11,8 @@ import (
 	"github.com/teambition/swaggo/swagger"
 )
 
+// feature if the expression is an anonymous member or an anonymous struct
+// it's useful for displays the model with swagger
 type feature int
 
 const (
@@ -28,23 +30,21 @@ type model struct {
 	f        feature
 }
 
-func newModel(filename, schema string, p *pkg) *model {
+// newModel create a model with file path, schema expression and package object
+func newModel(filename string, e ast.Expr, p *pkg) *model {
 	return &model{
-		Expr:     ast.NewIdent(schema),
+		Expr:     e,
 		filename: filename,
 		p:        p,
 	}
 }
 
-// raw the raw type of model
-func (m *model) newModel(e ast.Expr) *model {
-	return &model{
-		Expr:     e,
-		filename: m.filename,
-		p:        m.p,
-	}
+// member the member of struct type with same environment
+func (m *model) member(e ast.Expr) *model {
+	return newModel(m.filename, e, m.p)
 }
 
+// clone clone the model expect model's name
 func (m *model) clone(e ast.Expr) *model {
 	nm := *m
 	nm.name = ""
@@ -52,7 +52,8 @@ func (m *model) clone(e ast.Expr) *model {
 	return &nm
 }
 
-func (m *model) inhert(other *model) *model {
+// inhertFeature inhert the feature from other model
+func (m *model) inhertFeature(other *model) *model {
 	m.f = other.f
 	return m
 }
@@ -126,8 +127,7 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		} else {
 			key = m.name
 			r.title = m.name
-			// find schema cache
-			// check if existed
+			// find result cache
 			if s.Definitions == nil {
 				s.Definitions = map[string]*swagger.Schema{}
 			} else if ips, ok := cachedModels[m.name]; ok {
@@ -167,7 +167,7 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		for _, f := range t.Fields.List {
 			var (
 				childR *result
-				nm     = m.newModel(f.Type)
+				nm     = m.member(f.Type)
 				name   string
 			)
 
@@ -226,6 +226,7 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		}
 
 		if m.f != anonStructFeature {
+			// cache the result and definitions for swagger's schema
 			ss, err := r.convertToSchema()
 			if err != nil {
 				return nil, err
@@ -239,8 +240,9 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 	return
 }
 
-// cachedModels
-// model name -> import path and result
+// cachedModels the cache of models
+// Format:
+//   model name -> import path and result
 var cachedModels = map[string][]*kv{}
 
 type kv struct {

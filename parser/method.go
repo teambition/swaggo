@@ -32,7 +32,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 	var routerPath, HTTPMethod string
 	tagName := m.ctrl.tagName
 	opt := swagger.Operation{
-		Responses: make(map[string]swagger.Response),
+		Responses: make(map[string]*swagger.Response),
 		Tags:      []string{tagName},
 	}
 	private := false
@@ -106,7 +106,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 			}
 			opt.Parameters = append(opt.Parameters, &para)
 		case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
-			sr := swagger.Response{}
+			sr := &swagger.Response{}
 			p := getparams(c)
 			respCode := ""
 			for idx, v := range p {

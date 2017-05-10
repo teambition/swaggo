@@ -7,19 +7,19 @@ func NewV2() *Swagger {
 // Swagger 2.0
 // Swagger list the resource
 type Swagger struct {
-	SwaggerVersion      string              `json:"swagger,omitempty" yaml:"swagger,omitempty"`
-	Infos               Information         `json:"info" yaml:"info"`
-	Host                string              `json:"host,omitempty" yaml:"host,omitempty"`
-	BasePath            string              `json:"basePath,omitempty" yaml:"basePath,omitempty"`
-	Schemes             []string            `json:"schemes,omitempty" yaml:"schemes,omitempty"`
-	Consumes            []string            `json:"consumes,omitempty" yaml:"consumes,omitempty"`
-	Produces            []string            `json:"produces,omitempty" yaml:"produces,omitempty"`
-	Paths               map[string]*Item    `json:"paths" yaml:"paths"`
-	Definitions         map[string]Schema   `json:"definitions,omitempty" yaml:"definitions,omitempty"`
-	SecurityDefinitions map[string]Security `json:"securityDefinitions,omitempty" yaml:"securityDefinitions,omitempty"`
-	Security            map[string][]string `json:"security,omitempty" yaml:"security,omitempty"`
-	Tags                []Tag               `json:"tags,omitempty" yaml:"tags,omitempty"`
-	ExternalDocs        *ExternalDocs       `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+	SwaggerVersion      string               `json:"swagger,omitempty" yaml:"swagger,omitempty"`
+	Infos               Information          `json:"info" yaml:"info"`
+	Host                string               `json:"host,omitempty" yaml:"host,omitempty"`
+	BasePath            string               `json:"basePath,omitempty" yaml:"basePath,omitempty"`
+	Schemes             []string             `json:"schemes,omitempty" yaml:"schemes,omitempty"`
+	Consumes            []string             `json:"consumes,omitempty" yaml:"consumes,omitempty"`
+	Produces            []string             `json:"produces,omitempty" yaml:"produces,omitempty"`
+	Paths               map[string]*Item     `json:"paths" yaml:"paths"`
+	Definitions         map[string]*Schema   `json:"definitions,omitempty" yaml:"definitions,omitempty"`
+	SecurityDefinitions map[string]*Security `json:"securityDefinitions,omitempty" yaml:"securityDefinitions,omitempty"`
+	Security            map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
+	Tags                []*Tag               `json:"tags,omitempty" yaml:"tags,omitempty"`
+	ExternalDocs        *ExternalDocs        `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 }
 
 // Information Provides metadata about the API. The metadata can be used by the clients if needed.
@@ -59,16 +59,16 @@ type Item struct {
 
 // Operation Describes a single API operation on a path.
 type Operation struct {
-	Tags        []string            `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Summary     string              `json:"summary,omitempty" yaml:"summary,omitempty"`
-	Description string              `json:"description,omitempty" yaml:"description,omitempty"`
-	OperationID string              `json:"operationId,omitempty" yaml:"operationId,omitempty"`
-	Consumes    []string            `json:"consumes,omitempty" yaml:"consumes,omitempty"`
-	Produces    []string            `json:"produces,omitempty" yaml:"produces,omitempty"`
-	Schemes     []string            `json:"schemes,omitempty" yaml:"schemes,omitempty"`
-	Parameters  []*Parameter        `json:"parameters,omitempty" yaml:"parameters,omitempty"`
-	Responses   map[string]Response `json:"responses,omitempty" yaml:"responses,omitempty"`
-	Deprecated  bool                `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
+	Tags        []string             `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Summary     string               `json:"summary,omitempty" yaml:"summary,omitempty"`
+	Description string               `json:"description,omitempty" yaml:"description,omitempty"`
+	OperationID string               `json:"operationId,omitempty" yaml:"operationId,omitempty"`
+	Consumes    []string             `json:"consumes,omitempty" yaml:"consumes,omitempty"`
+	Produces    []string             `json:"produces,omitempty" yaml:"produces,omitempty"`
+	Schemes     []string             `json:"schemes,omitempty" yaml:"schemes,omitempty"`
+	Parameters  []*Parameter         `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+	Responses   map[string]*Response `json:"responses,omitempty" yaml:"responses,omitempty"`
+	Deprecated  bool                 `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 }
 
 // Parameter Describes a single operation parameter.
@@ -96,31 +96,31 @@ type ParameterItems struct {
 
 // Schema Object allows the definition of input and output data types.
 type Schema struct {
-	Ref         string               `json:"$ref,omitempty" yaml:"$ref,omitempty"`
-	Title       string               `json:"title,omitempty" yaml:"title,omitempty"`
-	Format      string               `json:"format,omitempty" yaml:"format,omitempty"`
-	Description string               `json:"description,omitempty" yaml:"description,omitempty"`
-	Required    []string             `json:"required,omitempty" yaml:"required,omitempty"`
-	Type        string               `json:"type,omitempty" yaml:"type,omitempty"`
-	Items       *Schema              `json:"items,omitempty" yaml:"items,omitempty"`
-	AllOf       []*Schema            `json:"allOf,omitempty" yaml:"allOf,omitempty"`
-	Properties  map[string]Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
+	Ref         string                `json:"$ref,omitempty" yaml:"$ref,omitempty"`
+	Title       string                `json:"title,omitempty" yaml:"title,omitempty"`
+	Format      string                `json:"format,omitempty" yaml:"format,omitempty"`
+	Description string                `json:"description,omitempty" yaml:"description,omitempty"`
+	Required    []string              `json:"required,omitempty" yaml:"required,omitempty"`
+	Type        string                `json:"type,omitempty" yaml:"type,omitempty"`
+	Items       *Schema               `json:"items,omitempty" yaml:"items,omitempty"`
+	AllOf       []*Schema             `json:"allOf,omitempty" yaml:"allOf,omitempty"`
+	Properties  map[string]*Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
 }
 
 // Propertie are taken from the JSON Schema definition but their definitions were adjusted to the Swagger Specification
 type Propertie struct {
-	Ref                  string               `json:"$ref,omitempty" yaml:"$ref,omitempty"`
-	Title                string               `json:"title,omitempty" yaml:"title,omitempty"`
-	Description          string               `json:"description,omitempty" yaml:"description,omitempty"`
-	Default              interface{}          `json:"default,omitempty" yaml:"default,omitempty"`
-	Type                 string               `json:"type,omitempty" yaml:"type,omitempty"`
-	Example              string               `json:"example,omitempty" yaml:"example,omitempty"`
-	Required             []string             `json:"required,omitempty" yaml:"required,omitempty"`
-	Format               string               `json:"format,omitempty" yaml:"format,omitempty"`
-	ReadOnly             bool                 `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
-	Properties           map[string]Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
-	Items                *Propertie           `json:"items,omitempty" yaml:"items,omitempty"`
-	AdditionalProperties *Propertie           `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
+	Ref                  string                `json:"$ref,omitempty" yaml:"$ref,omitempty"`
+	Title                string                `json:"title,omitempty" yaml:"title,omitempty"`
+	Description          string                `json:"description,omitempty" yaml:"description,omitempty"`
+	Default              interface{}           `json:"default,omitempty" yaml:"default,omitempty"`
+	Type                 string                `json:"type,omitempty" yaml:"type,omitempty"`
+	Example              string                `json:"example,omitempty" yaml:"example,omitempty"`
+	Required             []string              `json:"required,omitempty" yaml:"required,omitempty"`
+	Format               string                `json:"format,omitempty" yaml:"format,omitempty"`
+	ReadOnly             bool                  `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
+	Properties           map[string]*Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
+	Items                *Propertie            `json:"items,omitempty" yaml:"items,omitempty"`
+	AdditionalProperties *Propertie            `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 }
 
 // Response as they are returned from executing this operation.

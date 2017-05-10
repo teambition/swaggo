@@ -18,7 +18,7 @@ type controller struct {
 }
 
 func (ctrl *controller) parse(s *swagger.Swagger) (err error) {
-	tag := swagger.Tag{}
+	tag := &swagger.Tag{}
 	for _, c := range strings.Split(ctrl.doc.Text(), "\n") {
 		switch {
 		case tagTrimPrefixAndSpace(&c, ctrlName):

@@ -43,6 +43,7 @@ type StructureWithEmbededPointer struct {
 type StructureWithAnonymousStructure struct {
 	Anonymous struct {
 		Name string
+		StructureWithSlice
 	}
 }
 

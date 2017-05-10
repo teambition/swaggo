@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"reflect"
@@ -10,26 +11,69 @@ import (
 	"github.com/teambition/swaggo/swagger"
 )
 
+type feature int
+
+const (
+	noneFeature       feature = iota
+	anonMemberFeature         // as an anonymous member type
+	anonStructFeature         // as an anonymous struct type
+)
+
+// model the type of golang
 type model struct {
-	*ast.TypeSpec
-	name     string // model struct name
-	filename string // in which file
-	p        *pkg
+	ast.Expr        // golang ast
+	name     string // the real name of model
+	filename string // appear in which file
+	p        *pkg   // appear in which package
+	f        feature
+}
+
+func newModel(filename, schema string, p *pkg) *model {
+	return &model{
+		Expr:     ast.NewIdent(schema),
+		filename: filename,
+		p:        p,
+	}
+}
+
+// raw the raw type of model
+func (m *model) newModel(e ast.Expr) *model {
+	return &model{
+		Expr:     e,
+		filename: m.filename,
+		p:        m.p,
+	}
+}
+
+// inhert the feature from other model
+func (m *model) inhert(other *model) *model {
+	m.f = other.f
+	return m
+}
+
+func (m *model) anonymousMember() *model {
+	m.f = anonMemberFeature
+	return m
+}
+
+func (m *model) anonymousStruct() *model {
+	m.f = anonStructFeature
+	return m
 }
 
 // parse parse the model in go code
-func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
-	switch t := e.(type) {
+func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
+	switch t := m.Expr.(type) {
 	case *ast.StarExpr:
-		return m.parse(s, t.X)
+		return m.newModel(t.X).inhert(m).parse(s)
 	case *ast.Ident, *ast.SelectorExpr:
 		schema := fmt.Sprint(t)
 		r = &result{}
 		// []SomeStruct
 		if strings.HasPrefix(schema, "[]") {
 			schema = schema[2:]
-			r.kind = arrayType
-			r.item, err = m.parse(s, ast.NewIdent(schema))
+			r.kind = arrayKind
+			r.item, err = m.newModel(ast.NewIdent(schema)).parse(s)
 			return
 		}
 		// &{foo Bar} to foo.Bar
@@ -37,147 +81,272 @@ func (m *model) parse(s *swagger.Swagger, e ast.Expr) (r *result, err error) {
 		schema = string(reInternalRepresentation.ReplaceAll([]byte(schema), []byte("$1.$2")))
 		// check if is basic type
 		if swaggerType, ok := basicTypes[schema]; ok {
-			return &result{
-				kind:    innerType,
-				buildin: schema,
-				swagger: swaggerType,
-			}, nil
+			r.kind = innerKind
+			r.buildin = schema
+			tmp := strings.Split(swaggerType, ":")
+			r.sType = tmp[0]
+			r.sFormat = tmp[1]
+			return
 		}
 		if nm, err := m.p.findModelBySchema(m.filename, schema); err != nil {
 			return nil, err
 		} else {
-			return nm.parse(s, nm.Type)
+			return nm.inhert(m).parse(s)
 		}
 	case *ast.ArrayType:
-		r = &result{kind: arrayType}
-		r.item, err = m.parse(s, t.Elt)
+		r = &result{kind: arrayKind}
+		r.item, err = m.newModel(t.Elt).parse(s)
 	case *ast.MapType:
-		r = &result{kind: mapType}
-		r.item, err = m.parse(s, t.Value)
+		r = &result{kind: mapKind}
+		r.item, err = m.newModel(t.Value).parse(s)
 	case *ast.InterfaceType:
-		return &result{kind: interfaceType}, nil
+		return &result{kind: interfaceKind}, nil
 	case *ast.StructType:
-		r = &result{kind: objectType}
-		// definitions: #/definitions/Model
-		key := m.name
-		// check if existed
-		if ips, ok := cachedModels[m.name]; ok {
-			exsited := false
-			for k, v := range ips {
-				if m.p.importPath == v {
-					exsited = true
-					if k != 0 {
-						key = fmt.Sprintf("%s_%d", m.name, k)
+		r = &result{kind: objectKind, items: map[string]*result{}}
+		// find schema cache
+		var key string
+		switch m.f {
+		case anonStructFeature:
+		default:
+			// check if existed
+			if s.Definitions == nil {
+				s.Definitions = map[string]*swagger.Schema{}
+			}
+
+			key = m.name
+			r.title = m.name
+			if ips, ok := cachedModels[m.name]; ok {
+				for k, v := range ips {
+					if m.p.importPath == v.path {
+						if k != 0 {
+							key = fmt.Sprintf("%s_%d", m.name, k)
+						}
+						if m.f == anonMemberFeature {
+							r = v.r
+							return
+						}
+						break
 					}
-					break
 				}
+			} else {
+				cachedModels[m.name] = []*kv{}
 			}
-			if !exsited {
-				cachedModels[m.name] = append(ips, m.p.importPath)
+			if _, ok := s.Definitions[key]; ok {
+				r.ref = "#/definitions/" + key
+				return
 			}
-		} else {
-			cachedModels[m.name] = []string{m.p.importPath}
 		}
 
-		if s.Definitions == nil {
-			s.Definitions = map[string]swagger.Schema{}
-		}
-		// schema missing
-		if _, ok := s.Definitions[key]; !ok {
-			ss := swagger.Schema{Title: m.name, Type: "object", Properties: map[string]swagger.Propertie{}}
-			for _, f := range t.Fields.List {
-				var (
-					sp   swagger.Propertie
-					tmpR *result
-				)
-				// anonymous struct
-				if _, ok := f.Type.(*ast.StructType); ok {
-					tmpM := *m
-					tmpM.name = fmt.Sprintf("_anonymous_%s", f.Names[0].String())
-					if tmpR, err = tmpM.parse(s, f.Type); err != nil {
-						return
-					}
-				} else {
-					if tmpR, err = m.parse(s, f.Type); err != nil {
-						return
-					}
-				}
-				if f.Names == nil {
-					// result must be a struct
-					if tmpR.ref == "" {
-						err = fmt.Errorf("anonymous member must has a struct type")
-						return
-					}
-					// anonymous member
-					// type A struct {
-					//     B
-					//     C
-					// }
-					ss.AllOf = append(ss.AllOf, &swagger.Schema{Ref: tmpR.ref})
-					continue
-				}
-				tmpR.parsePropertie(&sp)
-				name := f.Names[0].Name
-				// check if it has tags
-				if f.Tag == nil {
-					ss.Properties[name] = sp
-					continue
-				}
-				// parse tag for name
-				stag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
-				// check jsonTag == "-"
-				jsonTag := strings.Split(stag.Get("json"), ",")
-				if len(jsonTag) != 0 && jsonTag[0] == "-" {
-					continue
-				}
-				name = jsonTag[0]
-				// swaggo:"(required),(desc),(default)"
-				swaggoTag := stag.Get("swaggo")
-				tmp := strings.Split(swaggoTag, ",")
-				for k, v := range tmp {
-					switch k {
-					case 0:
-						if v == "true" {
-							ss.Required = append(ss.Required, name)
-						}
-					case 1:
-						sp.Description = v
-					case 2:
-						if v != "" {
-							if sp.Default, err = str2RealType(v, r.buildin); err != nil {
-								return
-							}
-						}
-					}
-				}
+		for _, f := range t.Fields.List {
+			var (
+				childR *result
+				nm     = m.newModel(f.Type)
+				name   string
+			)
+			// anonymous struct
+			// type A struct {
+			//     B struct {}
+			// }
+			if _, ok := f.Type.(*ast.StructType); ok {
+				nm = nm.anonymousStruct()
+			} else if f.Names == nil {
+				// anonymous member
+				// type A struct {
+				//     B
+				//     C
+				// }
+				nm = nm.anonymousMember()
+			}
+			if childR, err = nm.parse(s); err != nil {
+				return
+			}
 
-				ss.Properties[name] = sp
+			if len(f.Names) != 0 {
+				name = f.Names[0].Name
+			}
+
+			if f.Tag != nil {
+				tmpName, desc, def, required, _ := parseTag(f.Tag.Value, childR.buildin)
+				if tmpName != "" {
+					name = tmpName
+				}
+				if required {
+					r.required = append(r.required, name)
+				}
+				childR.desc = desc
+				childR.def = def
+			}
+
+			// must as a anonymous struct
+			if nm.f == anonMemberFeature {
+				hasKey := false
+				for k1, v1 := range childR.items {
+					for k2, _ := range r.items {
+						if k1 == k2 {
+							hasKey = true
+							break
+						}
+					}
+					if !hasKey {
+						r.items[k1] = v1
+					}
+				}
+			} else {
+				r.items[name] = childR
+			}
+		}
+
+		// fmt.Printf("%#v\n", r)
+		if m.f != anonStructFeature {
+			ss, err := r.convertToSchema()
+			if err != nil {
+				return nil, err
 			}
 			s.Definitions[key] = ss
+			cachedModels[m.name] = append(cachedModels[m.name], &kv{m.p.importPath, r})
+			if m.f != anonMemberFeature {
+				r.ref = "#/definitions/" + key
+			}
 		}
-		r.ref = "#/definitions/" + key
 	}
 	return
 }
 
 // cachedModels
 // model name -> import paths
-var cachedModels = map[string][]string{}
+var cachedModels = map[string][]*kv{}
+
+type kv struct {
+	path string
+	r    *result
+}
+
+type kind int
 
 const (
-	innerType     = "inner"
-	arrayType     = "array"
-	mapType       = "map"
-	objectType    = "object"
-	interfaceType = "interface"
+	noneKind kind = iota
+	innerKind
+	arrayKind
+	mapKind
+	objectKind
+	interfaceKind
 )
 
 type result struct {
-	kind    string
-	buildin string  // buildin type
-	swagger string  // kind == inner
-	ref     string  // kind == object
-	item    *result // kind in (array, map)
+	kind     kind
+	title    string
+	buildin  string      // golang type
+	sType    string      // swagger type
+	sFormat  string      // swagger format
+	def      interface{} // default value
+	desc     string
+	ref      string
+	item     *result
+	required []string
+	items    map[string]*result
+}
+
+func parseTag(tagStr, buildin string) (name, desc string, def interface{}, required bool, err error) {
+	// parse tag for name
+	stag := reflect.StructTag(strings.Trim(tagStr, "`"))
+	// check jsonTag == "-"
+	jsonTag := strings.Split(stag.Get("json"), ",")
+	if len(jsonTag) != 0 && jsonTag[0] != "-" {
+		name = jsonTag[0]
+	}
+	// swaggo:"(required),(desc),(default)"
+	swaggoTag := stag.Get("swaggo")
+	tmp := strings.Split(swaggoTag, ",")
+	for k, v := range tmp {
+		switch k {
+		case 0:
+			if v == "true" {
+				required = true
+			}
+		case 1:
+			desc = v
+		case 2:
+			if v != "" {
+				def, err = str2RealType(v, buildin)
+			}
+		}
+	}
+	return
+}
+
+func (r *result) convertToSchema() (*swagger.Schema, error) {
+	ss := &swagger.Schema{}
+	switch r.kind {
+	case objectKind:
+		r.parseSchema(ss)
+	default:
+		return nil, errors.New("result need object kind")
+	}
+	return ss, nil
+}
+
+func (r *result) parseSchema(ss *swagger.Schema) {
+	ss.Title = r.title
+	switch r.kind {
+	case innerKind:
+		ss.Type = r.sType
+		ss.Format = r.sFormat
+	case objectKind:
+		ss.Type = "object"
+		if r.ref != "" {
+			ss.Ref = r.ref
+			return
+		}
+		ss.Required = r.required
+		if ss.Properties == nil {
+			ss.Properties = make(map[string]*swagger.Propertie)
+		}
+		for k, v := range r.items {
+			sp := &swagger.Propertie{}
+			v.parsePropertie(sp)
+			ss.Properties[k] = sp
+		}
+	case arrayKind:
+		ss.Type = "array"
+		ss.Items = &swagger.Schema{}
+		r.item.parseSchema(ss.Items)
+	case interfaceKind:
+		ss.Type = "object"
+	}
+}
+
+func (r *result) parsePropertie(sp *swagger.Propertie) {
+	switch r.kind {
+	case innerKind:
+		sp.Type = r.sType
+		sp.Format = r.sFormat
+	case arrayKind:
+		sp.Type = "array"
+		sp.Items = &swagger.Propertie{}
+		r.item.parsePropertie(sp.Items)
+	case mapKind:
+		sp.Type = "object"
+		sp.AdditionalProperties = &swagger.Propertie{}
+		r.item.parsePropertie(sp.AdditionalProperties)
+	case objectKind:
+		sp.Type = "object"
+		if r.ref != "" {
+			sp.Ref = r.ref
+			return
+		}
+		sp.Required = r.required
+		if sp.Properties == nil {
+			sp.Properties = make(map[string]*swagger.Propertie)
+		}
+		for k, v := range r.items {
+			tmpSp := &swagger.Propertie{}
+			v.parsePropertie(tmpSp)
+			sp.Properties[k] = tmpSp
+		}
+	case interfaceKind:
+		sp.Type = "object"
+		// TODO
+	}
 }
 
 func (r *result) parseParam(sp *swagger.Parameter) error {
@@ -189,12 +358,11 @@ func (r *result) parseParam(sp *swagger.Parameter) error {
 		r.parseSchema(sp.Schema)
 	default:
 		switch r.kind {
-		case innerType:
-			tmp := strings.Split(r.swagger, ":")
-			sp.Type = tmp[0]
-			sp.Format = tmp[1]
-		case arrayType:
-			sp.Type = arrayType
+		case innerKind:
+			sp.Type = r.sType
+			sp.Format = r.sFormat
+		case arrayKind:
+			sp.Type = "array"
 			sp.Items = &swagger.ParameterItems{}
 			if err := r.item.parseParamItem(sp.Items); err != nil {
 				return err
@@ -210,12 +378,11 @@ func (r *result) parseParam(sp *swagger.Parameter) error {
 
 func (r *result) parseParamItem(sp *swagger.ParameterItems) error {
 	switch r.kind {
-	case innerType:
-		tmp := strings.Split(r.swagger, ":")
-		sp.Type = tmp[0]
-		sp.Format = tmp[1]
-	case arrayType:
-		sp.Type = arrayType
+	case innerKind:
+		sp.Type = r.sType
+		sp.Format = r.sFormat
+	case arrayKind:
+		sp.Type = "array"
 		sp.Items = &swagger.ParameterItems{}
 		if err := r.item.parseParamItem(sp.Items); err != nil {
 			return err
@@ -226,47 +393,6 @@ func (r *result) parseParamItem(sp *swagger.ParameterItems) error {
 		return fmt.Errorf("not support(%s) in any value other than `body`", r.kind)
 	}
 	return nil
-}
-
-func (r *result) parseSchema(ss *swagger.Schema) {
-	switch r.kind {
-	case innerType:
-		tmp := strings.Split(r.swagger, ":")
-		ss.Type = tmp[0]
-		ss.Format = tmp[1]
-	case objectType:
-		ss.Type = objectType
-		ss.Ref = r.ref
-	case arrayType:
-		ss.Type = arrayType
-		ss.Items = &swagger.Schema{}
-		r.item.parseSchema(ss.Items)
-	case interfaceType:
-		ss.Type = objectType
-	}
-}
-
-func (r *result) parsePropertie(sp *swagger.Propertie) {
-	switch r.kind {
-	case innerType:
-		tmp := strings.Split(r.swagger, ":")
-		sp.Type = tmp[0]
-		sp.Format = tmp[1]
-	case arrayType:
-		sp.Type = arrayType
-		sp.Items = &swagger.Propertie{}
-		r.item.parsePropertie(sp.Items)
-	case mapType:
-		sp.Type = objectType
-		sp.AdditionalProperties = &swagger.Propertie{}
-		r.item.parsePropertie(sp.AdditionalProperties)
-	case objectType:
-		sp.Type = objectType
-		sp.Ref = r.ref
-	case interfaceType:
-		sp.Type = objectType
-		// TODO
-	}
 }
 
 // inner type and swagger type

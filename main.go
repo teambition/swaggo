@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	AppVersion = "v0.1.5"
+	AppVersion = "v0.2.0"
 )
 
 func main() {

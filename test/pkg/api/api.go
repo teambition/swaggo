@@ -62,6 +62,7 @@ func (c *Context) WriteResponse(response interface{}) {
 // @Success 201 SubStructDot "Success"
 // @Success 202 sub.SubStructAlias "Success"
 // @Success 203 StructureWithAnonymousStructure
+// @Success 204 map[string]string
 //
 // Failure:response_code/data_type(optional)/describtion(optional)
 // @Failure 400 APIError "We need ID!!"

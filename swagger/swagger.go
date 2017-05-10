@@ -96,15 +96,16 @@ type ParameterItems struct {
 
 // Schema Object allows the definition of input and output data types.
 type Schema struct {
-	Ref         string                `json:"$ref,omitempty" yaml:"$ref,omitempty"`
-	Title       string                `json:"title,omitempty" yaml:"title,omitempty"`
-	Format      string                `json:"format,omitempty" yaml:"format,omitempty"`
-	Description string                `json:"description,omitempty" yaml:"description,omitempty"`
-	Required    []string              `json:"required,omitempty" yaml:"required,omitempty"`
-	Type        string                `json:"type,omitempty" yaml:"type,omitempty"`
-	Items       *Schema               `json:"items,omitempty" yaml:"items,omitempty"`
-	AllOf       []*Schema             `json:"allOf,omitempty" yaml:"allOf,omitempty"`
-	Properties  map[string]*Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
+	Ref                  string                `json:"$ref,omitempty" yaml:"$ref,omitempty"`
+	Title                string                `json:"title,omitempty" yaml:"title,omitempty"`
+	Format               string                `json:"format,omitempty" yaml:"format,omitempty"`
+	Description          string                `json:"description,omitempty" yaml:"description,omitempty"`
+	Required             []string              `json:"required,omitempty" yaml:"required,omitempty"`
+	Type                 string                `json:"type,omitempty" yaml:"type,omitempty"`
+	Items                *Schema               `json:"items,omitempty" yaml:"items,omitempty"`
+	AllOf                []*Schema             `json:"allOf,omitempty" yaml:"allOf,omitempty"`
+	Properties           map[string]*Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
+	AdditionalProperties *Propertie            `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 }
 
 // Propertie are taken from the JSON Schema definition but their definitions were adjusted to the Swagger Specification

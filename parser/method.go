@@ -47,7 +47,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 			opt.OperationID = tagName + "." + c
 		case tagTrimPrefixAndSpace(&c, methodDesc):
 			if opt.Description != "" {
-				opt.Description += "\n" + c
+				opt.Description += "<br>" + c
 			} else {
 				opt.Description = c
 			}

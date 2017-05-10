@@ -80,7 +80,11 @@ func doc2Swagger(projectPath, swaggerGo string, dev bool, sw *swagger.Swagger) e
 				case tagTrimPrefixAndSpace(&s, appTitle):
 					sw.Infos.Title = s
 				case tagTrimPrefixAndSpace(&s, appDesc):
-					sw.Infos.Description = s
+					if sw.Infos.Description != "" {
+						sw.Infos.Description += "<br>" + s
+					} else {
+						sw.Infos.Description = s
+					}
 				case tagTrimPrefixAndSpace(&s, appTermsOfServiceUrl):
 					sw.Infos.TermsOfService = s
 				case tagTrimPrefixAndSpace(&s, appContact):

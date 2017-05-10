@@ -83,6 +83,14 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 			r.item, err = m.newModel(ast.NewIdent(schema)).parse(s)
 			return
 		}
+		// map[string]SomeStruct
+		if strings.HasPrefix(schema, "map[string]") {
+			fmt.Println(schema)
+			schema = schema[11:]
+			r.kind = mapKind
+			r.item, err = m.newModel(ast.NewIdent(schema)).parse(s)
+			return
+		}
 		// &{foo Bar} to foo.Bar
 		reInternalRepresentation := regexp.MustCompile("&\\{(\\w*) (\\w*)\\}")
 		schema = string(reInternalRepresentation.ReplaceAll([]byte(schema), []byte("$1.$2")))
@@ -318,6 +326,10 @@ func (r *result) parseSchema(ss *swagger.Schema) {
 		ss.Type = "array"
 		ss.Items = &swagger.Schema{}
 		r.item.parseSchema(ss.Items)
+	case mapKind:
+		ss.Type = "object"
+		ss.AdditionalProperties = &swagger.Propertie{}
+		r.item.parsePropertie(ss.AdditionalProperties)
 	case interfaceKind:
 		ss.Type = "object"
 	}

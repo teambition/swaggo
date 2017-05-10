@@ -85,7 +85,6 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		}
 		// map[string]SomeStruct
 		if strings.HasPrefix(schema, "map[string]") {
-			fmt.Println(schema)
 			schema = schema[11:]
 			r.kind = mapKind
 			r.item, err = m.newModel(ast.NewIdent(schema)).parse(s)

@@ -117,7 +117,7 @@ func (suite *AppSuite) TestSwagger() {
 	assert.Equal("StructureWithEmbededStructure", inhertStruct.Title)
 	assert.Equal("object", inhertStruct.Type)
 
-	// assert.True(reflect.DeepEqual([]string{"id", "name", "age", "ctime", "sub", "i"}, inhertStruct.Required))
+	assert.True(subset(inhertStruct.Required, []string{"id", "name", "age", "ctime", "sub", "i"}))
 	assert.Equal("the user age", inhertStruct.Properties["age"].Description)
 	assert.Equal(18, inhertStruct.Properties["age"].Default)
 	assert.Equal("integer", inhertStruct.Properties["age"].Type)

@@ -26,6 +26,7 @@ type model struct {
 	filename string // appear in which file
 	p        *pkg   // appear in which package
 	f        feature
+	isMember bool // is a member of struct
 }
 
 func newModel(filename, schema string, p *pkg) *model {
@@ -48,6 +49,12 @@ func (m *model) newModel(e ast.Expr) *model {
 // inhert the feature from other model
 func (m *model) inhert(other *model) *model {
 	m.f = other.f
+	m.isMember = other.isMember
+	return m
+}
+
+func (m *model) member() *model {
+	m.isMember = true
 	return m
 }
 
@@ -95,19 +102,26 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		}
 	case *ast.ArrayType:
 		r = &result{kind: arrayKind}
-		r.item, err = m.newModel(t.Elt).parse(s)
+		r.item, err = m.newModel(t.Elt).inhert(m).parse(s)
 	case *ast.MapType:
 		r = &result{kind: mapKind}
-		r.item, err = m.newModel(t.Value).parse(s)
+		r.item, err = m.newModel(t.Value).inhert(m).parse(s)
 	case *ast.InterfaceType:
 		return &result{kind: interfaceKind}, nil
 	case *ast.StructType:
 		r = &result{kind: objectKind, items: map[string]*result{}}
-		// find schema cache
+		// anonymous struct
+		// type A struct {
+		//     B struct {}
+		// }
+		if m.isMember && m.f != anonMemberFeature {
+			m.anonymousStruct()
+		}
 		var key string
 		switch m.f {
 		case anonStructFeature:
 		default:
+			// find schema cache
 			// check if existed
 			if s.Definitions == nil {
 				s.Definitions = map[string]*swagger.Schema{}
@@ -140,16 +154,11 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		for _, f := range t.Fields.List {
 			var (
 				childR *result
-				nm     = m.newModel(f.Type)
+				nm     = m.newModel(f.Type).member()
 				name   string
 			)
-			// anonymous struct
-			// type A struct {
-			//     B struct {}
-			// }
-			if _, ok := f.Type.(*ast.StructType); ok {
-				nm = nm.anonymousStruct()
-			} else if f.Names == nil {
+
+			if f.Names == nil {
 				// anonymous member
 				// type A struct {
 				//     B
@@ -196,7 +205,6 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 			}
 		}
 
-		// fmt.Printf("%#v\n", r)
 		if m.f != anonStructFeature {
 			ss, err := r.convertToSchema()
 			if err != nil {

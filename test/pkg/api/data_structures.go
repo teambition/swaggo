@@ -41,9 +41,12 @@ type StructureWithEmbededPointer struct {
 }
 
 type StructureWithAnonymousStructure struct {
-	Anonymous struct {
+	Anonymous []struct {
 		Name string
 		StructureWithSlice
+		Anonymous []struct {
+			Name string
+		}
 	}
 }
 

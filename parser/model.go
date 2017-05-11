@@ -171,20 +171,18 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 				name   string
 			)
 
-			if f.Names == nil {
+			if len(f.Names) == 0 {
 				// anonymous member
 				// type A struct {
 				//     B
 				//     C
 				// }
-				nm = nm.anonymousMember()
+				nm.anonymousMember()
+			} else {
+				name = f.Names[0].Name
 			}
 			if childR, err = nm.parse(s); err != nil {
 				return
-			}
-
-			if len(f.Names) != 0 {
-				name = f.Names[0].Name
 			}
 
 			if f.Tag != nil {

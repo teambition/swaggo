@@ -102,11 +102,11 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 			r.sFormat = tmp[1]
 			return
 		}
-		if nm, err := m.p.findModelBySchema(m.filename, schema); err != nil {
+		nm, err := m.p.findModelBySchema(m.filename, schema)
+		if err != nil {
 			return nil, err
-		} else {
-			return nm.inhertFeature(m).parse(s)
 		}
+		return nm.inhertFeature(m).parse(s)
 	case *ast.ArrayType:
 		r = &result{kind: arrayKind}
 		r.item, err = m.clone(t.Elt).parse(s)
@@ -142,14 +142,13 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 							r = v.r
 							return
 						}
-						if _, ok := s.Definitions[key]; ok {
+						_, ok := s.Definitions[key]
+						if ok {
 							r.ref = "#/definitions/" + key
 							return
-						} else {
-							err = fmt.Errorf("the key(%s) must existed in swagger's definitions", key)
-							return
 						}
-						break
+						err = fmt.Errorf("the key(%s) must existed in swagger's definitions", key)
+						return
 					}
 				}
 				if !exsited {
@@ -201,7 +200,7 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 			if nm.f == anonMemberFeature {
 				hasKey := false
 				for k1, v1 := range childR.items {
-					for k2, _ := range r.items {
+					for k2 := range r.items {
 						if k1 == k2 {
 							hasKey = true
 							break
@@ -405,7 +404,7 @@ func (r *result) parseParam(sp *swagger.Parameter) error {
 		default:
 			// TODO
 			// not support object and array in any value other than "body"
-			return fmt.Errorf("not support(%s) in(%s) any value other than `body`", r.kind, sp.In)
+			return fmt.Errorf("not support(%d) in(%s) any value other than `body`", r.kind, sp.In)
 		}
 	}
 	return nil
@@ -425,7 +424,7 @@ func (r *result) parseParamItem(sp *swagger.ParameterItems) error {
 	default:
 		// TODO
 		// param not support object, map, interface
-		return fmt.Errorf("not support(%s) in any value other than `body`", r.kind)
+		return fmt.Errorf("not support(%d) in any value other than `body`", r.kind)
 	}
 	return nil
 }

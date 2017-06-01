@@ -45,7 +45,7 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		if err := parser.Parser(c.String("project"),
+		if err := parser.Parse(c.String("project"),
 			c.String("swagger"),
 			c.String("output"),
 			c.String("type"),

@@ -115,11 +115,11 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 		default:
 			// import m "lib/math"         m.Sin
 		}
-		if importPkg, err := newPackage(localName, importPath, false); err != nil {
+		importPkg, err := newPackage(localName, importPath, false)
+		if err != nil {
 			return nil, err
-		} else {
-			pkgs = append(pkgs, importPkg)
 		}
+		pkgs = append(pkgs, importPkg)
 	}
 	p.importPkgs[filename] = pkgs
 	return pkgs, nil
@@ -148,7 +148,8 @@ func (p *pkg) findModel(modelName string) (*model, error) {
 	for filename, f := range p.Files {
 		for name, obj := range f.Scope.Objects {
 			if name == modelName {
-				if ts, ok := obj.Decl.(*ast.TypeSpec); ok {
+				ts, ok := obj.Decl.(*ast.TypeSpec)
+				if ok {
 					m := &model{
 						name:     name,
 						filename: filename,
@@ -157,9 +158,8 @@ func (p *pkg) findModel(modelName string) (*model, error) {
 					}
 					p.models = append(p.models, m)
 					return m, nil
-				} else {
-					return nil, fmt.Errorf("unsupport type(%#v) of model(%s)", obj.Decl, modelName)
 				}
+				return nil, fmt.Errorf("unsupport type(%#v) of model(%s)", obj.Decl, modelName)
 			}
 		}
 	}

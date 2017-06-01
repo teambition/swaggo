@@ -16,7 +16,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func Parser(projectPath, swaggerGo, output, t string, dev bool) (err error) {
+// Parse the project by args
+func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
 	sw := swagger.NewV2()
 	if err = doc2Swagger(projectPath, swaggerGo, dev, sw); err != nil {
 		return
@@ -85,7 +86,7 @@ func doc2Swagger(projectPath, swaggerGo string, dev bool, sw *swagger.Swagger) e
 					} else {
 						sw.Infos.Description = s
 					}
-				case tagTrimPrefixAndSpace(&s, appTermsOfServiceUrl):
+				case tagTrimPrefixAndSpace(&s, appTermsOfServiceURL):
 					sw.Infos.TermsOfService = s
 				case tagTrimPrefixAndSpace(&s, appContact):
 					sw.Infos.Contact.EMail = s
@@ -93,7 +94,7 @@ func doc2Swagger(projectPath, swaggerGo string, dev bool, sw *swagger.Swagger) e
 					sw.Infos.Contact.Name = s
 				case tagTrimPrefixAndSpace(&s, appURL):
 					sw.Infos.Contact.URL = s
-				case tagTrimPrefixAndSpace(&s, appLicenseUrl):
+				case tagTrimPrefixAndSpace(&s, appLicenseURL):
 					sw.Infos.License.URL = s
 				case tagTrimPrefixAndSpace(&s, appLicense):
 					sw.Infos.License.Name = s

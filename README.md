@@ -6,6 +6,18 @@ Parse annotations from Go code and generate [Swagger Documentation](http://swagg
 [![Coverage Status](http://img.shields.io/coveralls/teambition/swaggo.svg?style=flat-square)](https://coveralls.io/r/teambition/swaggo)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/teambition/swaggo/master/LICENSE)
 
+<!-- TOC -->
+
+- [About](#about)
+- [Quick Start Guide](#quick-start-guide)
+    - [Install](#install)
+    - [Declarative Comments Format](#declarative-comments-format)
+    - [Usage](#usage)
+    - [Kpass Example](#kpass-example)
+    - [TODO(In the near future)](#todoin-the-near-future)
+
+<!-- /TOC -->
+
 ## About
 
 Generate API documentation from annotations in Go code. It's always used for you Go server application.

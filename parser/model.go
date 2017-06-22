@@ -313,9 +313,11 @@ func (r *result) convertToSchema() (*swagger.Schema, error) {
 
 func (r *result) parseSchema(ss *swagger.Schema) {
 	ss.Title = r.title
+	// NOTE:
+	// schema description not support now
+	// ss.Description = r.desc
 	switch r.kind {
 	case innerKind:
-		ss.Description = r.desc
 		ss.Type = r.sType
 		ss.Format = r.sFormat
 		ss.Default = r.def
@@ -348,9 +350,9 @@ func (r *result) parseSchema(ss *swagger.Schema) {
 }
 
 func (r *result) parsePropertie(sp *swagger.Propertie) {
+	sp.Description = r.desc
 	switch r.kind {
 	case innerKind:
-		sp.Description = r.desc
 		sp.Default = r.def
 		sp.Type = r.sType
 		sp.Format = r.sFormat

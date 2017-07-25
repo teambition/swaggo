@@ -180,20 +180,26 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 			} else {
 				name = f.Names[0].Name
 			}
+
 			if childR, err = nm.parse(s); err != nil {
 				return
 			}
-
 			if f.Tag != nil {
-				tmpName, desc, def, required, _ := parseTag(f.Tag.Value, childR.buildin)
+				var (
+					required bool
+					tmpName  string
+					ignore   bool
+				)
+				if tmpName, childR.desc, childR.def, required, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
+					// hanppens when `josn:"-"`
+					continue
+				}
 				if tmpName != "" {
 					name = tmpName
 				}
 				if required {
 					r.required = append(r.required, name)
 				}
-				childR.desc = desc
-				childR.def = def
 			}
 
 			// must as a anonymous struct
@@ -216,7 +222,6 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 						}
 					}
 				}
-
 			} else {
 				r.items[name] = childR
 			}
@@ -272,12 +277,16 @@ type result struct {
 	items    map[string]*result
 }
 
-func parseTag(tagStr, buildin string) (name, desc string, def interface{}, required bool, err error) {
+func parseTag(tagStr, buildin string) (name, desc string, def interface{}, required, ignore bool, err error) {
 	// parse tag for name
 	stag := reflect.StructTag(strings.Trim(tagStr, "`"))
 	// check jsonTag == "-"
 	jsonTag := strings.Split(stag.Get("json"), ",")
-	if len(jsonTag) != 0 && jsonTag[0] != "-" {
+	if len(jsonTag) != 0 {
+		if jsonTag[0] == "-" {
+			ignore = true
+			return
+		}
 		name = jsonTag[0]
 	}
 	// swaggo:"(required),(desc),(default)"

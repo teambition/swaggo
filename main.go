@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	AppVersion = "v0.2.5"
+	version = "v0.2.6"
 )
 
 func main() {
 	app := cli.NewApp()
-	app.Version = AppVersion
+	app.Version = version
 	app.Name = "swaggo"
 	app.HelpName = "swaggo"
 	app.Usage = "a utility for convert go annotations to swagger-doc"

@@ -44,10 +44,11 @@ func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
 }
 
 var (
-	vendor  = ""
-	goPaths = []string{}
-	goRoot  = ""
-	devMode bool
+	vendor    = ""
+	goPaths   = []string{}
+	goRoot    = ""
+	devMode   bool
+	goVersion = runtime.Version()
 )
 
 func doc2Swagger(projectPath, swaggerGo string, dev bool, sw *swagger.Swagger) error {

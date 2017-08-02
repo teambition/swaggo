@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -16,8 +15,34 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+var (
+	vendor    = ""
+	goPaths   = []string{}
+	goRoot    = ""
+	devMode   bool
+	goVersion = runtime.Version()
+)
+
+func init() {
+	goPaths = filepath.SplitList(os.Getenv("GOPATH"))
+	if len(goPaths) == 0 {
+		panic("GOPATH environment variable is not set or empty")
+	}
+	goRoot = runtime.GOROOT()
+	if goRoot == "" {
+		panic("GOROOT environment variable is not set or empty")
+	}
+}
+
 // Parse the project by args
 func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
+	absPPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	vendor = filepath.Join(absPPath, "vendor")
+	devMode = dev
+
 	sw := swagger.NewV2()
 	if err = doc2Swagger(projectPath, swaggerGo, dev, sw); err != nil {
 		return
@@ -43,31 +68,7 @@ func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
 	return ioutil.WriteFile(filepath.Join(output, filename), data, 0644)
 }
 
-var (
-	vendor    = ""
-	goPaths   = []string{}
-	goRoot    = ""
-	devMode   bool
-	goVersion = runtime.Version()
-)
-
 func doc2Swagger(projectPath, swaggerGo string, dev bool, sw *swagger.Swagger) error {
-	// init
-	goPaths = filepath.SplitList(os.Getenv("GOPATH"))
-	if len(goPaths) == 0 {
-		return errors.New("GOPATH environment variable is not set or empty")
-	}
-	goRoot = runtime.GOROOT()
-	if goRoot == "" {
-		return errors.New("GOROOT environment variable is not set or empty")
-	}
-	absPPath, err := filepath.Abs(projectPath)
-	if err != nil {
-		return err
-	}
-	vendor = filepath.Join(absPPath, "vendor")
-	devMode = dev
-
 	f, err := parser.ParseFile(token.NewFileSet(), swaggerGo, nil, parser.ParseComments)
 	if err != nil {
 		return err

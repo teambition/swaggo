@@ -16,11 +16,10 @@ import (
 )
 
 var (
-	vendor    = ""
-	goPaths   = []string{}
-	goRoot    = ""
-	devMode   bool
-	goVersion = runtime.Version()
+	vendor  = ""
+	goPaths = []string{}
+	goRoot  = ""
+	devMode bool
 )
 
 func init() {

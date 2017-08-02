@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"go/ast"
+	"log"
 	"strconv"
 	"strings"
 
@@ -184,7 +185,7 @@ func (m *method) parse(s *swagger.Swagger) (err error) {
 			item.Options = &opt
 		}
 		if oldOpt != nil {
-			fmt.Println("[Warnning]", m.prettyErr("router(%s %s) has existed in controller(%s)", HTTPMethod, routerPath, oldOpt.Tags[0]))
+			log.Println("[Warning]", m.prettyErr("router(%s %s) has existed in controller(%s)", HTTPMethod, routerPath, oldOpt.Tags[0]))
 		}
 		s.Paths[routerPath] = item
 	}
@@ -209,7 +210,7 @@ func (m *method) paramCheck(opt *swagger.Operation) {
 		case paramType[body]:
 			if hasBody {
 				if !bodyWarn {
-					fmt.Println("[Warnning]", m.prettyErr("more than one body-type existed in this method"))
+					log.Println("[Warning]", m.prettyErr("more than one body-type existed in this method"))
 					bodyWarn = true
 				}
 			} else {
@@ -219,22 +220,22 @@ func (m *method) paramCheck(opt *swagger.Operation) {
 			if !v.Required {
 				// path-type parameter must be required
 				v.Required = true
-				fmt.Println("[Warnning]", m.prettyErr("path-type parameter(%s) must be required", v.Name))
+				log.Println("[Warning]", m.prettyErr("path-type parameter(%s) must be required", v.Name))
 			}
 		}
 	}
 	if hasBody && hasForm {
-		fmt.Println("[Warnning]", m.prettyErr("body-type and form-type cann't coexist"))
+		log.Println("[Warning]", m.prettyErr("body-type and form-type cann't coexist"))
 	}
 	// If type is "file", the consumes MUST be
 	// either "multipart/form-data", " application/x-www-form-urlencoded"
 	// or both and the parameter MUST be in "formData".
 	if hasFile {
 		if hasBody {
-			fmt.Println("[Warnning]", m.prettyErr("file-data-type and body-type cann't coexist"))
+			log.Println("[Warning]", m.prettyErr("file-data-type and body-type cann't coexist"))
 		}
 		if !(len(opt.Consumes) == 0 || subset(opt.Consumes, []string{contentType[formType], contentType[formDataType]})) {
-			fmt.Println("[Warnning]", m.prettyErr("file-data-type existed and this api's consumes must in(form, formData)"))
+			log.Println("[Warning]", m.prettyErr("file-data-type existed and this api's consumes must in(form, formData)"))
 		}
 	}
 }

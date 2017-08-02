@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/teambition/swaggo/parser"
@@ -50,11 +50,11 @@ func main() {
 			c.String("output"),
 			c.String("type"),
 			c.Bool("dev")); err != nil {
-			return fmt.Errorf("[Error] %v", err)
+			return err
 		}
 		return nil
 	}
 	if err := app.Run(os.Args); err != nil {
-		fmt.Printf("[Error] %v", err)
+		log.Printf("[Error] %v", err)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 	"strings"
 
@@ -42,18 +43,13 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 	}
 	pkgs, err := parser.ParseDir(token.NewFileSet(), absPath, func(info os.FileInfo) bool {
 		name := info.Name()
-		isgo19 := strings.Index(goVersion, "1.9") != -1
-		isgo19File := strings.HasSuffix(name, "19.go")
-
 		return !info.IsDir() &&
 			!strings.HasPrefix(name, ".") &&
-			// 19.go need go version with 1.9
-			(isgo19 || !isgo19File) &&
 			// ignore the test file
 			!strings.HasSuffix(name, "_test.go")
 	}, parser.ParseComments)
 	if err != nil {
-		return
+		log.Printf("[Warning] %v\n", err)
 	}
 
 	for k, p := range pkgs {

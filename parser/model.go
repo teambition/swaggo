@@ -104,7 +104,7 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		}
 		nm, err := m.p.findModelBySchema(m.filename, schema)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("findModelBySchema filename(%s) schema(%s) error(%v)", m.filename, schema, err)
 		}
 		return nm.inhertFeature(m).parse(s)
 	case *ast.ArrayType:

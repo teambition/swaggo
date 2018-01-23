@@ -127,14 +127,9 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		} else {
 			key = m.name
 			r.title = m.name
-			// find result cache
-			if s.Definitions == nil {
-				s.Definitions = map[string]*swagger.Schema{}
-			} else if ips, ok := cachedModels[m.name]; ok {
-				exsited := false
+			if ips, ok := cachedModels[m.name]; ok {
 				for k, v := range ips {
-					exsited = m.p.importPath == v.path
-					if exsited {
+					if m.p.importPath == v.path {
 						if k != 0 {
 							key = fmt.Sprintf("%s_%d", m.name, k)
 						}
@@ -142,21 +137,14 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 							r = v.r
 							return
 						}
-						_, ok := s.Definitions[key]
-						if ok {
-							r.ref = "#/definitions/" + key
-							return
-						}
-						err = fmt.Errorf("the key(%s) must existed in swagger's definitions", key)
+						r.ref = "#/definitions/" + key
 						return
 					}
 				}
-				if !exsited {
-					ips = append(ips, &kv{m.p.importPath, r})
-					cachedModels[m.name] = ips
-					if len(ips) > 1 {
-						key = fmt.Sprintf("%s_%d", m.name, len(ips)-1)
-					}
+				ips = append(ips, &kv{m.p.importPath, r})
+				cachedModels[m.name] = ips
+				if len(ips) > 1 {
+					key = fmt.Sprintf("%s_%d", m.name, len(ips)-1)
 				}
 			} else {
 				cachedModels[m.name] = []*kv{&kv{m.p.importPath, r}}
@@ -232,6 +220,10 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 			ss, err := r.convertToSchema()
 			if err != nil {
 				return nil, err
+			}
+			// set definitions
+			if s.Definitions == nil {
+				s.Definitions = map[string]*swagger.Schema{}
 			}
 			s.Definitions[key] = ss
 			if m.f != anonMemberFeature {

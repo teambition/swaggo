@@ -10,4 +10,7 @@ cover:
 	go tool cover -html=gover.coverprofile
 	rm -f *.coverprofile
 
-.PHONY: test cover
+build:
+	go build -o swaggo main.go
+
+.PHONY: test cover build

@@ -95,11 +95,20 @@ func (m *model) parse(s *swagger.Swagger) (r *result, err error) {
 		schema = string(reInternalRepresentation.ReplaceAll([]byte(schema), []byte("$1.$2")))
 		// check if is basic type
 		if swaggerType, ok := basicTypes[schema]; ok {
-			r.kind = innerKind
-			r.buildin = schema
 			tmp := strings.Split(swaggerType, ":")
-			r.sType = tmp[0]
-			r.sFormat = tmp[1]
+			typ := tmp[0]
+			format := tmp[1]
+
+			if strings.HasPrefix(typ, "[]") {
+				schema = typ[2:]
+				r.kind = arrayKind
+				r.item, err = m.clone(ast.NewIdent(schema)).parse(s)
+			} else {
+				r.kind = innerKind
+				r.buildin = schema
+				r.sType = typ
+				r.sFormat = format
+			}
 			return
 		}
 		nm, err := m.p.findModelBySchema(m.filename, schema)
@@ -463,4 +472,15 @@ var basicTypes = map[string]string{
 	"rune":       "string:byte",
 	"time.Time":  "string:date-time",
 	"file":       "file:",
+	// option.XXX from code.teambition.com/soa/go-lib/pkg/option
+	"option.Interface": "object:",
+	"option.ObjectID":  "string:",
+	"option.ObjectIDs": "[]string:",
+	"option.String":    "string:",
+	"option.Strings":   "[]string:",
+	"option.Time":      "string:date-time",
+	"option.Number":    "number:int32",
+	"option.Numbers":   "[]number:int32",
+	"option.Bool":      "boolean:",
+	"option.Bools":     "[]boolean:",
 }

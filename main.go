@@ -4,7 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/teambition/swaggo/parser"
+	"github.com/teambition/swaggo/parserv3"
+	//"github.com/teambition/swaggo/parser"
 	"github.com/urfave/cli"
 )
 
@@ -40,12 +41,12 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "type, t",
-			Value: "json",
+			Value: "yaml",
 			Usage: "the type of swagger file (json or yaml)",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		if err := parser.Parse(c.String("project"),
+		if err := parserv3.Parse(c.String("project"),
 			c.String("swagger"),
 			c.String("output"),
 			c.String("type"),

@@ -15,12 +15,12 @@ func New() *web.Router {
 			resultJSON, _ := json.Marshal(c.Response)
 			rw.Write(resultJSON)
 		}).
-		Get("/testapi/get-string-by-int/{some_id}", (*api.Context).GetStringByInt).
-		Get("/testapi/get-struct-by-int/{some_id}", (*api.Context).GetStructByInt).
-		Get("/testapi/get-simple-array-by-string/{some_id}", (*api.Context).GetSimpleArrayByString).
-		Get("/testapi/get-struct-array-by-string/{some_id}", (*api.Context).GetStructArrayByString).
+		Get("/testapi/get-string-by-int/some_id", (*api.Context).GetStringByInt).
+		Get("/testapi/get-struct-by-int/some_id", (*api.Context).GetStructByInt).
+		Get("/testapi/get-simple-array-by-string/some_id", (*api.Context).GetSimpleArrayByString).
+		Get("/testapi/get-struct-array-by-string/some_id", (*api.Context).GetStructArrayByString).
 		Post("/testapi/get-struct3", (*api.Context).PostStruct3).
 		Delete("/testapi/get-struct3", (*api.Context).DelStruct3).
-		Get("/testapi/get-struct2-by-int/{some_id}", (*api.Context).GetStruct2ByInt)
+		Get("/testapi/get-struct2-by-int/some_id", (*api.Context).GetStruct2ByInt)
 	return router
 }

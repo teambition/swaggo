@@ -1,4 +1,4 @@
-package parser
+package parserv3
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/teambition/swaggo/swagger"
+	"github.com/teambition/swaggo/swaggerv3"
 )
 
 type pkg struct {
@@ -72,22 +72,31 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 }
 
 // parseSchema Parse schema in this code file
-func (p *pkg) parseSchema(s *swagger.Swagger, ss *swagger.Schema, filename, schema string) (err error) {
+func (p *pkg) parseSchema(s *swaggerv3.Swagger, filename, schema string, pathSchema *swaggerv3.PathSchema) (err error) {
 	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
 	if err != nil {
 		return err
 	}
-	r.parseSchema(ss)
+	r.parsePathSchema(pathSchema)
 	return
 }
 
 // parseParam Parse param in this code file
-func (p *pkg) parseParam(s *swagger.Swagger, sp *swagger.Parameter, filename, schema string) (err error) {
+func (p *pkg) parseParam(s *swaggerv3.Swagger, sp *swaggerv3.Parameter, filename, schema string) (err error) {
 	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
 	if err != nil {
 		return err
 	}
 	return r.parseParam(sp)
+}
+
+// parseParam Parse param in this code file
+func (p *pkg) parseBodyParam(s *swaggerv3.Swagger, sp *swaggerv3.RequestBody, filename, schema string) (err error) {
+	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
+	if err != nil {
+		return err
+	}
+	return r.parseBodyParam(sp)
 }
 
 // parseImports parse packages from file

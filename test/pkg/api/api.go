@@ -39,6 +39,7 @@ func (c *Context) WriteResponse(response interface{}) {
 // @Description get string by ID desc
 // @Description multi line
 //
+// @Param Authorization header string true "oauth token"
 // Consumes type include(json,plain,xml)
 // @Consumes json,plain,xml,html
 //
@@ -52,8 +53,6 @@ func (c *Context) WriteResponse(response interface{}) {
 // if file type param exsited, all params must be form except path and query
 // @Param path_param path int - "Some ID" 123
 // @Param form_param form file - "Request Form"
-// @Param body_param body string - "Request Body"
-// @Param body_param_2 body string - "Request Body"
 // @Param query_param query []string - "Array"
 // @Param query_param_2 query [][]string - "Array Array"
 //
@@ -69,7 +68,7 @@ func (c *Context) WriteResponse(response interface{}) {
 // @Failure 404 APIError "Can not find ID"
 //
 // Router:http_method/api_path
-// @Router GET /testapi/get-string-by-int/{some_id}
+// @Router GET /testapi/get-string-by-int/some_id
 func (c *Context) GetStringByInt(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse(fmt.Sprint("Some data for %s ID", req.PathParams["some_id"]))
 }
@@ -77,6 +76,7 @@ func (c *Context) GetStringByInt(rw web.ResponseWriter, req *web.Request) {
 // @Title GetStructByInt
 // @Summary get struct by ID
 // @Description get struct by ID
+// @Permission member get
 // @Consumes json
 // @Produces json
 // @Param some_id path int true "Some ID"
@@ -85,7 +85,7 @@ func (c *Context) GetStringByInt(rw web.ResponseWriter, req *web.Request) {
 // @Success 200  StructureWithEmbededStructure "Success"
 // @Failure 400  APIError "We need ID!!"
 // @Failure 404  APIError "Can not find ID"
-// @Router GET /testapi/get-struct-by-int/{some_id}
+// @Router GET /testapi/get-struct-by-int/some_id
 func (c *Context) GetStructByInt(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse(StructureWithEmbededStructure{})
 }
@@ -101,7 +101,7 @@ func (c *Context) GetStructByInt(rw web.ResponseWriter, req *web.Request) {
 // @Success 200 StructureWithEmbededPointer "Success"
 // @Failure 400 APIError "We need ID!!"
 // @Failure 404 APIError "Can not find ID"
-// @Router GET /testapi/get-struct2-by-int/{some_id}
+// @Router GET /testapi/get-struct2-by-int/some_id
 func (c *Context) GetStruct2ByInt(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse(StructureWithEmbededPointer{})
 }
@@ -117,7 +117,7 @@ func (c *Context) GetStruct2ByInt(rw web.ResponseWriter, req *web.Request) {
 // @Success 200 []string "Success"
 // @Failure 400 APIError "We need ID!!"
 // @Failure 404 APIError "Can not find ID"
-// @Router POST /testapi/get-simple-array-by-string/{some_id}
+// @Router POST /testapi/get-simple-array-by-string/some_id
 func (c *Context) GetSimpleArrayByString(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse([]string{"one", "two", "three"})
 }
@@ -133,7 +133,7 @@ func (c *Context) GetSimpleArrayByString(rw web.ResponseWriter, req *web.Request
 // @Success 200 []subpackage.SimpleStructure "Success"
 // @Failure 400 APIError "We need ID!!"
 // @Failure 404 APIError "Can not find ID"
-// @Router PUT /testapi/get-struct-array-by-string/{some_id}
+// @Router PUT /testapi/get-struct-array-by-string/some_id
 func (c *Context) GetStructArrayByString(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse([]subpackage.SimpleStructure{
 		subpackage.SimpleStructure{},
@@ -154,7 +154,7 @@ func (c *Context) GetStructArrayByString(rw web.ResponseWriter, req *web.Request
 // @Success 200 []SimpleStructure "Success"
 // @Failure 400 APIError "We need ID!!"
 // @Failure 404 APIError "Can not find ID"
-// @Router PUT /testapi/get-same-struct-array-by-string/{some_id}
+// @Router PUT /testapi/get-same-struct-array-by-string/some_id
 func (c *Context) GetSameStructArraryByString(rw web.ResponseWriter, req *web.Request) {
 	c.WriteResponse([]SimpleStructure{
 		SimpleStructure{},

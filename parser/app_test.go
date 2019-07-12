@@ -67,7 +67,7 @@ func (suite *AppSuite) TestSwagger() {
 	assert.Equal("127.0.0.1:3000", suite.Host)
 	assert.Equal("/api", suite.BasePath)
 	assert.Equal(7, len(suite.Paths))
-	router := suite.Paths["/testapi/get-string-by-int/{some_id}"]
+	router := suite.Paths["/testapi/get-string-by-intsome_id"]
 	assert.NotNil(router)
 	assert.NotNil(router.Get)
 	assert.Equal([]string{"testapi"}, router.Get.Tags)

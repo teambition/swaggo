@@ -103,9 +103,11 @@ func (r *result) parsePropertie(sp *swaggerv3.Propertie) {
 	case innerKind:
 		sp.Default = r.def
 		sp.Type = r.sType
+		sp.Description = r.desc
 	case arrayKind:
 		sp.Type = "array"
 		sp.Items = &swaggerv3.Propertie{}
+		sp.Description = r.desc
 		r.item.parsePropertie(sp.Items)
 	case mapKind:
 		sp.Type = "object"
@@ -116,6 +118,7 @@ func (r *result) parsePropertie(sp *swaggerv3.Propertie) {
 			sp.Ref = r.ref
 			return
 		}
+		sp.Description = r.desc
 		sp.Required = r.required
 		if sp.Properties == nil {
 			sp.Properties = make(map[string]*swaggerv3.Propertie)

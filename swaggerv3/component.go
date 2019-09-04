@@ -32,4 +32,5 @@ type Propertie struct {
 	Properties           map[string]*Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
 	Items                *Propertie            `json:"items,omitempty" yaml:"items,omitempty"`
 	AdditionalProperties *Propertie            `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
+	Description          string                `json:"description,omitempty" yaml:"description,omitempty"`
 }

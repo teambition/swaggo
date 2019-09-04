@@ -112,8 +112,6 @@ func (m *method) parse(s *swaggerv3.Swagger) (err error) {
 	if s.Paths == nil {
 		s.Paths = map[string]swaggerv3.PathItem{}
 	}
-	routerPath = strings.ReplaceAll(routerPath, "{", "")
-	routerPath = strings.ReplaceAll(routerPath, "}", "")
 	item, ok := s.Paths[routerPath]
 	if !ok {
 		item = swaggerv3.PathItem{}

@@ -12,6 +12,7 @@ type Swagger struct {
 	Tags       []Tag               `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Paths      map[string]PathItem `json:"paths,omitempty" yaml:"paths,omitempty"`
 	Components Components          `json:"components,omitempty" yaml:"components,omitempty"`
+	Servers    []Server            `json:"servers,omitempty" yaml:"servers,omitempty"`
 }
 
 // Info ...
@@ -32,5 +33,11 @@ type Contact struct {
 // Tag ...
 type Tag struct {
 	Name        string `json:"name,omitempty" yaml:"name,omitempty"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+}
+
+// Server ...
+type Server struct {
+	URL         string `json:"url,omitempty" yaml:"url,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }

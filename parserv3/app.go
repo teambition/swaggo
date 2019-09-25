@@ -94,7 +94,11 @@ func doc2SwaggerV3(projectPath, swaggerGo string, dev bool, sw *swaggerv3.Swagge
 					sw.Info.Contact.Email = s
 				case tagTrimPrefixAndSpace(&s, appName):
 					sw.Info.Contact.Name = s
-
+				case tagTrimPrefixAndSpace(&s, appURL):
+					if len(sw.Servers) == 0 {
+						sw.Servers = append(sw.Servers, swaggerv3.Server{})
+					}
+					sw.Servers[0].URL = s
 					// case tagTrimPrefixAndSpace(&s, appSchemes):
 					// 	sw.Schemes = strings.Split(s, ",")
 					// case tagTrimPrefixAndSpace(&s, appHost):

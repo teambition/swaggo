@@ -20,10 +20,6 @@ func main() {
 	app.HelpName = "swaggo"
 	app.Usage = "a utility for convert go annotations to swagger-doc"
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "dev, d",
-			Usage: "develop mode",
-		},
 		cli.StringFlag{
 			Name:  "swagger, s",
 			Value: "./swagger.go",
@@ -49,8 +45,7 @@ func main() {
 		if err := parserv3.Parse(c.String("project"),
 			c.String("swagger"),
 			c.String("output"),
-			c.String("type"),
-			c.Bool("dev")); err != nil {
+			c.String("type")); err != nil {
 			return err
 		}
 		return nil

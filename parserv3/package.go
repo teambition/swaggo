@@ -18,7 +18,7 @@ type pkg struct {
 	localName  string // alias name of package include "."
 	importPath string // the import package name
 	absPath    string // whereis package in filesystem
-	vendor     string // project vendor for lookup package
+	// vendor     string // project vendor for lookup package
 	// filename -> import pkgs
 	importPkgs map[string][]*pkg
 	// model name -> model
@@ -62,7 +62,7 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 			Package:    p,
 			localName:  localName,
 			importPath: importPath,
-			vendor:     vendor,
+			//vendor:     vendor,
 			absPath:    absPath,
 			importPkgs: map[string][]*pkg{},
 			models:     []*model{},

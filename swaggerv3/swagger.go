@@ -9,10 +9,10 @@ func New() *Swagger {
 type Swagger struct {
 	Openapi    string              `json:"openapi,omitempty" yaml:"openapi,omitempty"`
 	Info       Info                `json:"info,omitempty" yaml:"info,omitempty"`
+	Servers    []Server            `json:"servers,omitempty" yaml:"servers,omitempty"`
 	Tags       []Tag               `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Paths      map[string]PathItem `json:"paths,omitempty" yaml:"paths,omitempty"`
 	Components Components          `json:"components,omitempty" yaml:"components,omitempty"`
-	Servers    []Server            `json:"servers,omitempty" yaml:"servers,omitempty"`
 }
 
 // Info ...

@@ -1,12 +1,14 @@
 package parserv3
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -16,11 +18,35 @@ import (
 )
 
 var (
-	vendor  = ""
-	goPaths = []string{}
-	goRoot  = ""
-	devMode bool
+	gomodInfo *GoMod
+	vendor    = ""
+	goPaths   = []string{}
+	goRoot    = ""
 )
+
+type Module struct {
+	Path    string
+	Version string
+}
+
+type GoMod struct {
+	Module  Module
+	Go      string
+	Require []Require
+	Exclude []Module
+	Replace []Replace
+}
+
+type Require struct {
+	Path     string
+	Version  string
+	Indirect bool
+}
+
+type Replace struct {
+	Old Module
+	New Module
+}
 
 func init() {
 	goPaths = filepath.SplitList(os.Getenv("GOPATH"))
@@ -31,20 +57,33 @@ func init() {
 	if goRoot == "" {
 		panic("GOROOT environment variable is not set or empty")
 	}
+	cmd := exec.Command("go", "mod", "edit", "-json")
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	e := cmd.Run()
+	if e != nil {
+		fmt.Println("[warin]go mod command fail " + e.Error())
+		return
+	}
+	mod := new(GoMod)
+	e = json.Unmarshal(output.Bytes(), mod)
+	if e != nil {
+		panic("[error] json unmarshal err : " + e.Error())
+	}
+	gomodInfo = mod
 }
 
 // Parse the project by args
-func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
+func Parse(projectPath, swaggerGo, output, t string) (err error) {
 	absPPath, err := filepath.Abs(projectPath)
 	if err != nil {
 		return err
 	}
 	vendor = filepath.Join(absPPath, "vendor")
-	devMode = dev
 
 	sw := swaggerv3.New()
 	sw.Openapi = "3.0.1"
-	if err = doc2SwaggerV3(projectPath, swaggerGo, dev, sw); err != nil {
+	if err = doc2SwaggerV3(projectPath, swaggerGo, sw); err != nil {
 		return
 	}
 	var (
@@ -68,7 +107,7 @@ func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
 	return ioutil.WriteFile(filepath.Join(output, filename), data, 0644)
 }
 
-func doc2SwaggerV3(projectPath, swaggerGo string, dev bool, sw *swaggerv3.Swagger) error {
+func doc2SwaggerV3(projectPath, swaggerGo string, sw *swaggerv3.Swagger) error {
 	f, err := parser.ParseFile(token.NewFileSet(), swaggerGo, nil, parser.ParseComments)
 	if err != nil {
 		return err

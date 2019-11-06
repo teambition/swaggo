@@ -36,13 +36,32 @@ func str2RealType(s string, typ string) (ret interface{}, err error) {
 }
 
 func absPathFromGoPath(importPath string) (string, bool) {
+	for _, req := range gomodInfo.Require {
+		if strings.Contains(importPath, req.Path) {
+			var modpath string
+			if importPath == req.Path {
+				modpath = importPath + "@" + req.Version
+			} else {
+				modpath = req.Path + "@" + req.Version + importPath[len(req.Path):]
+			}
+
+			for _, goPath := range goPaths {
+				wg, _ := filepath.EvalSymlinks(filepath.Join(goPath, "pkg", "mod", modpath))
+				if fileExists(wg) {
+					return wg, true
+				}
+			}
+		}
+	}
+
+	// find absolute path
 	if vendor != "" {
 		vendorImport := filepath.Join(vendor, importPath)
 		if fileExists(vendorImport) {
 			return vendorImport, true
 		}
 	}
-	// find absolute path
+
 	for _, goPath := range goPaths {
 		wg, _ := filepath.EvalSymlinks(filepath.Join(goPath, "src", importPath))
 		if fileExists(wg) {

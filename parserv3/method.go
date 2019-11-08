@@ -71,6 +71,8 @@ func (m *method) parse(s *swaggerv3.Swagger) (err error) {
 				Action:   elements[1],
 			}
 			opt.Permissions = append(opt.Permissions, permission)
+		case tagTrimPrefixAndSpace(&c, methodPrivate):
+			opt.Private, _ = strconv.ParseBool(c)
 		case tagTrimPrefixAndSpace(&c, methodSuccess), tagTrimPrefixAndSpace(&c, methodFailure):
 			sr := &swaggerv3.Response{}
 			p := getparams(c)

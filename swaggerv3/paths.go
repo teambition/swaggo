@@ -17,6 +17,7 @@ type Operation struct {
 	Tags        []string             `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Summary     string               `json:"summary,omitempty" yaml:"summary,omitempty"`
 	Permissions []Permission         `json:"x-permissions,omitempty" yaml:"x-permissions,omitempty"`
+	Private     bool                 `json:"x-private,omitempty" yaml:"x-private,omitempty"`
 	Description string               `json:"description,omitempty" yaml:"description,omitempty"`
 	Consumes    []string             `json:"consumes,omitempty" yaml:"consumes,omitempty"`
 	Produces    []string             `json:"produces,omitempty" yaml:"produces,omitempty"`

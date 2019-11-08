@@ -49,6 +49,7 @@ const (
 	methodTitle      = "@Title"
 	methodDesc       = "@Description"
 	methodPermission = "@Permission"
+	methodPrivate    = "@Private"
 	methodSummary    = "@Summary"
 	methodSuccess    = "@Success"
 	methodParam      = "@Param"

@@ -137,30 +137,40 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 			var (
 				childR *result
 				nm     = m.member(f.Type)
-				name   string
+				//name   string
+				names []string
 			)
 			if len(f.Names) == 0 {
 				nm.anonymousMember()
 			} else {
-				name = f.Names[0].Name
+				//name = f.Names[0].Name
+				names = append(names, f.Names[0].Name)
 			}
 			if childR, err = nm.parse(s); err != nil {
 				return
 			}
 			if f.Tag != nil {
 				var (
-					required bool
-					tmpName  string
-					ignore   bool
+					required   bool
+					tmpName    string
+					mjsonNames []string
+					ignore     bool
 				)
-				if tmpName, childR.desc, childR.def, required, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
+				// if tmpName, childR.desc, childR.def, required, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
+				// 	continue // hanppens when `josn:"-"`
+				// }
+				if tmpName, mjsonNames, childR.desc, childR.def, required, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
 					continue // hanppens when `josn:"-"`
 				}
 				if tmpName != "" {
-					name = tmpName
+					names[0] = tmpName
+				}
+				if len(mjsonNames) > 0 {
+					names = append(names, mjsonNames...)
+					r.deprecated = append(r.deprecated, names[0])
 				}
 				if required {
-					r.required = append(r.required, name)
+					r.required = append(r.required, names...)
 				}
 			}
 			// must as a anonymous struct
@@ -184,7 +194,20 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 					}
 				}
 			} else {
-				r.items[name] = childR
+				//r.items[name] = childR
+				rawdesc := childR.desc
+				for k, v := range names {
+					if k == 0 && len(names) > 1 {
+						recommend := names[1]
+						tmpres := *childR
+						tmpres.desc = "等同于 " + recommend + ", 未来会废弃，推荐使用 " + recommend + "。"
+						r.items[v] = &tmpres
+						continue
+					}
+
+					childR.desc = rawdesc
+					r.items[v] = childR
+				}
 			}
 		}
 
@@ -221,7 +244,7 @@ const (
 	interfaceKind
 )
 
-func parseTag(tagStr, buildin string) (name, desc string, def interface{}, required, ignore bool, err error) {
+func parseTag(tagStr, buildin string) (name string, mjsonNames []string, desc string, def interface{}, required, ignore bool, err error) {
 	// parse tag for name
 	stag := reflect.StructTag(strings.Trim(tagStr, "`"))
 	// check jsonTag == "-"
@@ -248,6 +271,25 @@ func parseTag(tagStr, buildin string) (name, desc string, def interface{}, requi
 			if v != "" {
 				def, err = str2RealType(v, buildin)
 			}
+		}
+	}
+
+	// mjson: "-,name1,name2,...,omitempty"
+	mjsonTag := stag.Get("mjson")
+	tmp = strings.Split(mjsonTag, ",")
+	for _, v := range tmp {
+		v = strings.TrimSpace(v)
+		if v == "-" {
+			ignore = true
+			return
+		}
+
+		if v == "omitempty" || v == "" {
+			continue
+		}
+
+		if v != name {
+			mjsonNames = append(mjsonNames, v)
 		}
 	}
 	return

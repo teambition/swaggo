@@ -8,14 +8,15 @@ import (
 )
 
 type result struct {
-	kind     kind
-	buildin  string      // golang type
-	def      interface{} // default value
-	desc     string
-	ref      string
-	item     *result
-	required []string
-	items    map[string]*result
+	kind       kind
+	buildin    string      // golang type
+	def        interface{} // default value
+	desc       string
+	ref        string
+	item       *result
+	required   []string
+	deprecated []string
+	items      map[string]*result
 
 	sType   string // swagger type
 	sFormat string // swagger format
@@ -78,6 +79,7 @@ func (r *result) parseSchema(ss *swaggerv3.Schema) {
 	case objectKind:
 		//ss.Properties = r.items
 		ss.Required = r.required
+		ss.Deprecated = r.deprecated
 		if ss.Properties == nil {
 			ss.Properties = make(map[string]*swaggerv3.Propertie)
 		}
@@ -120,6 +122,7 @@ func (r *result) parsePropertie(sp *swaggerv3.Propertie) {
 		}
 		sp.Description = r.desc
 		sp.Required = r.required
+		sp.Deprecated = r.deprecated
 		if sp.Properties == nil {
 			sp.Properties = make(map[string]*swaggerv3.Propertie)
 		}

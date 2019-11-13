@@ -186,6 +186,8 @@ func (m *method) handleMethodParam(s *swaggerv3.Swagger, opt *swaggerv3.Operatio
 		if err = m.ctrl.r.parseParam(s, &para, m.filename, p[2]); err != nil {
 			return
 		}
+
+		mjsonName := ""
 		for idx, v := range p {
 			switch idx {
 			case 3:
@@ -196,9 +198,23 @@ func (m *method) handleMethodParam(s *swaggerv3.Swagger, opt *swaggerv3.Operatio
 			case 4:
 				// description
 				para.Description = strings.Trim(v, `" `)
+			case 5:
+				mjsonName = strings.TrimSpace(v)
 			}
 		}
-		opt.Parameters = append(opt.Parameters, &para)
+
+		if mjsonName != "" {
+			// 兼容mjson标记
+			tmppara := para
+			tmppara.Description = "等同于 " + mjsonName + ", 未来会废弃，推荐使用 " + mjsonName + "。"
+			tmppara.Deprecated = true
+			opt.Parameters = append(opt.Parameters, &tmppara)
+
+			para.Name = mjsonName
+			opt.Parameters = append(opt.Parameters, &para)
+		} else {
+			opt.Parameters = append(opt.Parameters, &para)
+		}
 	}
 	return
 }

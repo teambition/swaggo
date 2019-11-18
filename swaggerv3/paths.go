@@ -41,7 +41,7 @@ type Parameter struct {
 	Description string           `json:"description,omitempty" yaml:"description,omitempty"`
 	Required    bool             `json:"required,omitempty" yaml:"required,omitempty"`
 	Schema      *ParameterSchema `json:"schema,omitempty" yaml:"schema,omitempty"`
-	Deprecated  bool             `json:"x-deprecated,omitempty" yaml:"x-deprecated,omitempty"`
+	Deprecated  bool             `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 }
 
 // ParameterSchema Object allows the definition of input and output data types.

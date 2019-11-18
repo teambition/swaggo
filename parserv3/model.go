@@ -158,15 +158,24 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 		if m.name == "" {
 			m.anonymousStruct()
 		} else {
+
 			if m.extend.template != "" {
-				r.ref = "#/components/schemas/" + m.name + ":" + m.extend.template
-			} else {
-				r.ref = "#/components/schemas/" + m.name
+				m.name = m.name + "_" + m.extend.template
 			}
+
+			r.ref = "#/components/schemas/" + m.name
 
 			if s.Components.Schemas == nil {
 				s.Components.Schemas = map[string]*swaggerv3.Schema{}
 			}
+		}
+
+		if len(m.extend.allof) > 0 {
+			arr := []string{}
+			arr = append(arr, m.name)
+			arr = append(arr, m.extend.allof...)
+			m.name = strings.Join(arr, "_")
+			r.ref = "#/components/schemas/" + m.name
 		}
 
 		for _, f := range t.Fields.List {
@@ -298,11 +307,7 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 				return nil, err
 			}
 
-			if m.extend.template != "" {
-				s.Components.Schemas[m.name+":"+m.extend.template] = ss
-			} else {
-				s.Components.Schemas[m.name] = ss
-			}
+			s.Components.Schemas[m.name] = ss
 		}
 	}
 	return

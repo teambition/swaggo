@@ -18,7 +18,6 @@ type Schema struct {
 	AllOf                []*Schema             `json:"allOf,omitempty" yaml:"allOf,omitempty"`
 	Properties           map[string]*Propertie `json:"properties,omitempty" yaml:"properties,omitempty"`
 	AdditionalProperties *Propertie            `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
-	Deprecated           []string              `json:"x-deprecated-fields,omitempty" yaml:"x-deprecated-fields,omitempty"`
 }
 
 // Propertie are taken from the JSON Schema definition but their definitions were adjusted to the Swagger Specification
@@ -34,5 +33,6 @@ type Propertie struct {
 	Items                *Propertie            `json:"items,omitempty" yaml:"items,omitempty"`
 	AdditionalProperties *Propertie            `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 	Description          string                `json:"description,omitempty" yaml:"description,omitempty"`
-	Deprecated           []string              `json:"x-deprecated-fields,omitempty" yaml:"x-deprecated-fields,omitempty"`
+	Deprecated           bool                  `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
+	OneOf                []*Propertie          `json:"oneOf,omitempty" yaml:"oneOf,omitempty"`
 }

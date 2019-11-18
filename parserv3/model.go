@@ -10,6 +10,18 @@ import (
 	"github.com/teambition/swaggo/swaggerv3"
 )
 
+var typeMap = map[string]string{
+	"util.JSONString": "string",
+	"util.Bool":       "bool",
+	"util.Int":        "int",
+	"util.Interface":  "interface {}",
+	"util.Number":     "float64",
+	"util.ObjectID":   "bson.ObjectId",
+	"util.String":     "string",
+	"util.Strings":    "[]string",
+	"util.Time":       "time.Time",
+}
+
 // feature if the expression is an anonymous member or an anonymous struct
 // it's useful for displays the model with swagger
 type feature int
@@ -27,20 +39,30 @@ type model struct {
 	filename string // appear in which file
 	p        *pkg   // appear in which package
 	f        feature
+	extend   schemaExtend
+}
+
+func getSchema(schema string) string {
+	if v, ok := typeMap[schema]; ok {
+		return v
+	}
+
+	return schema
 }
 
 // newModel create a model with file path, schema expression and package object
-func newModel(filename string, e ast.Expr, p *pkg) *model {
+func newModel(filename string, e ast.Expr, p *pkg, extend schemaExtend) *model {
 	return &model{
 		Expr:     e,
 		filename: filename,
 		p:        p,
+		extend:   extend,
 	}
 }
 
 // member the member of struct type with same environment
 func (m *model) member(e ast.Expr) *model {
-	return newModel(m.filename, e, m.p)
+	return newModel(m.filename, e, m.p, schemaExtend{})
 }
 
 // clone clone the model expect model's name
@@ -54,6 +76,7 @@ func (m *model) clone(e ast.Expr) *model {
 // inhertFeature inhert the feature from other model
 func (m *model) inhertFeature(other *model) *model {
 	m.f = other.f
+	m.extend = other.extend
 	return m
 }
 
@@ -74,10 +97,12 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 		return m.clone(t.X).parse(s)
 	case *ast.Ident, *ast.SelectorExpr:
 		schema := fmt.Sprint(t)
+		schema = getSchema(schema)
 		r = &result{}
 		// []SomeStruct
 		if strings.HasPrefix(schema, "[]") {
 			schema = schema[2:]
+			schema = getSchema(schema)
 			r.kind = arrayKind
 			r.item, err = m.clone(ast.NewIdent(schema)).parse(s)
 			return
@@ -85,6 +110,7 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 		// map[string]SomeStruct
 		if strings.HasPrefix(schema, "map[string]") {
 			schema = schema[11:]
+			schema = getSchema(schema)
 			r.kind = mapKind
 			r.item, err = m.clone(ast.NewIdent(schema)).parse(s)
 			return
@@ -92,6 +118,7 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 		// &{foo Bar} to foo.Bar
 		reInternalRepresentation := regexp.MustCompile("&\\{(\\w*) (\\w*)\\}")
 		schema = string(reInternalRepresentation.ReplaceAll([]byte(schema), []byte("$1.$2")))
+		schema = getSchema(schema)
 		// check if is basic type
 		if swaggerType, ok := basicTypes[schema]; ok {
 			tmp := strings.Split(swaggerType, ":")
@@ -100,6 +127,7 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 
 			if strings.HasPrefix(typ, "[]") {
 				schema = typ[2:]
+				schema = getSchema(schema)
 				r.kind = arrayKind
 				r.item, err = m.clone(ast.NewIdent(schema)).parse(s)
 			} else {
@@ -110,8 +138,10 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 			}
 			return
 		}
+
 		nm, err := m.p.findModelBySchema(m.filename, schema)
 		if err != nil {
+			fmt.Println(err)
 			return nil, fmt.Errorf("findModelBySchema filename(%s) schema(%s) error(%v)", m.filename, schema, err)
 		}
 		return nm.inhertFeature(m).parse(s)
@@ -128,11 +158,17 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 		if m.name == "" {
 			m.anonymousStruct()
 		} else {
-			r.ref = "#/components/schemas/" + m.name
+			if m.extend.template != "" {
+				r.ref = "#/components/schemas/" + m.name + ":" + m.extend.template
+			} else {
+				r.ref = "#/components/schemas/" + m.name
+			}
+
 			if s.Components.Schemas == nil {
 				s.Components.Schemas = map[string]*swaggerv3.Schema{}
 			}
 		}
+
 		for _, f := range t.Fields.List {
 			var (
 				childR *result
@@ -146,9 +182,26 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 				//name = f.Names[0].Name
 				names = append(names, f.Names[0].Name)
 			}
+
 			if childR, err = nm.parse(s); err != nil {
 				return
 			}
+
+			// 支持 Result<TaskFlow> 这种输出
+			if m.extend.template != "" && childR.kind == interfaceKind {
+				m.extend.template = getSchema(m.extend.template)
+				childR, err = newModel(m.filename, ast.NewIdent(m.extend.template), m.p, schemaExtend{}).parse(s)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
+
+			var (
+				oneOfType string
+				oneOfDesc string
+			)
+
 			if f.Tag != nil {
 				var (
 					required   bool
@@ -159,7 +212,7 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 				// if tmpName, childR.desc, childR.def, required, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
 				// 	continue // hanppens when `josn:"-"`
 				// }
-				if tmpName, mjsonNames, childR.desc, childR.def, required, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
+				if tmpName, mjsonNames, childR.desc, childR.def, required, oneOfType, oneOfDesc, ignore, _ = parseTag(f.Tag.Value, childR.buildin); ignore {
 					continue // hanppens when `josn:"-"`
 				}
 				if tmpName != "" {
@@ -167,12 +220,24 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 				}
 				if len(mjsonNames) > 0 {
 					names = append(names, mjsonNames...)
-					r.deprecated = append(r.deprecated, names[0])
 				}
 				if required {
 					r.required = append(r.required, names...)
 				}
 			}
+
+			// 处理oneOf
+			if oneOfType != "" {
+				oneOfType = getSchema(oneOfType)
+				tmpR, err := newModel(m.filename, ast.NewIdent(oneOfType), m.p, schemaExtend{}).parse(s)
+				if err != nil {
+					return nil, err
+				}
+
+				tmpR.desc = oneOfDesc
+				childR.oneof = append(childR.oneof, tmpR)
+			}
+
 			// must as a anonymous struct
 			if nm.f == anonMemberFeature {
 				hasKey := false
@@ -201,12 +266,27 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 						recommend := names[1]
 						tmpres := *childR
 						tmpres.desc = "等同于 " + recommend + ", 未来会废弃，推荐使用 " + recommend + "。"
+						tmpres.deprecated = true
 						r.items[v] = &tmpres
 						continue
 					}
 
 					childR.desc = rawdesc
 					r.items[v] = childR
+				}
+			}
+
+		}
+
+		// 支持 TaskFlow+Pagezation 这种输出
+		if len(m.extend.allof) > 0 {
+			for _, v := range m.extend.allof {
+				v = getSchema(v)
+				cr, _ := newModel(m.filename, ast.NewIdent(v), m.p, schemaExtend{}).parse(s)
+				if cr != nil {
+					for k, _ := range cr.items {
+						r.items[k] = cr.items[k]
+					}
 				}
 			}
 		}
@@ -217,7 +297,12 @@ func (m *model) parse(s *swaggerv3.Swagger) (r *result, err error) {
 			if err != nil {
 				return nil, err
 			}
-			s.Components.Schemas[m.name] = ss
+
+			if m.extend.template != "" {
+				s.Components.Schemas[m.name+":"+m.extend.template] = ss
+			} else {
+				s.Components.Schemas[m.name] = ss
+			}
 		}
 	}
 	return
@@ -244,7 +329,7 @@ const (
 	interfaceKind
 )
 
-func parseTag(tagStr, buildin string) (name string, mjsonNames []string, desc string, def interface{}, required, ignore bool, err error) {
+func parseTag(tagStr, buildin string) (name string, mjsonNames []string, desc string, def interface{}, required bool, oneOfType string, oneOfDesc string, ignore bool, err error) {
 	// parse tag for name
 	stag := reflect.StructTag(strings.Trim(tagStr, "`"))
 	// check jsonTag == "-"
@@ -290,6 +375,18 @@ func parseTag(tagStr, buildin string) (name string, mjsonNames []string, desc st
 
 		if v != name {
 			mjsonNames = append(mjsonNames, v)
+		}
+	}
+
+	// oneof:"(type),(desc)"
+	oneOf := stag.Get("oneof")
+	tmp = strings.Split(oneOf, ",")
+	for k, v := range tmp {
+		switch k {
+		case 0:
+			oneOfType = v
+		case 1:
+			oneOfDesc = v
 		}
 	}
 	return

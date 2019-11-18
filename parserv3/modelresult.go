@@ -7,6 +7,11 @@ import (
 	"github.com/teambition/swaggo/swaggerv3"
 )
 
+type schemaExtend struct {
+	template string   // 支持泛型，内嵌结构替换
+	allof    []string // 支持allOf操作符
+}
+
 type result struct {
 	kind       kind
 	buildin    string      // golang type
@@ -15,11 +20,13 @@ type result struct {
 	ref        string
 	item       *result
 	required   []string
-	deprecated []string
+	deprecated bool
 	items      map[string]*result
 
 	sType   string // swagger type
 	sFormat string // swagger format
+	extend  schemaExtend
+	oneof   []*result
 }
 
 func (r *result) convertToPathSchema() (*swaggerv3.PathSchema, error) {
@@ -79,7 +86,6 @@ func (r *result) parseSchema(ss *swaggerv3.Schema) {
 	case objectKind:
 		//ss.Properties = r.items
 		ss.Required = r.required
-		ss.Deprecated = r.deprecated
 		if ss.Properties == nil {
 			ss.Properties = make(map[string]*swaggerv3.Propertie)
 		}
@@ -101,40 +107,72 @@ func (r *result) parseSchema(ss *swaggerv3.Schema) {
 }
 
 func (r *result) parsePropertie(sp *swaggerv3.Propertie) {
+	property := &swaggerv3.Propertie{}
 	switch r.kind {
 	case innerKind:
-		sp.Default = r.def
-		sp.Type = r.sType
-		sp.Description = r.desc
+		property.Default = r.def
+		property.Type = r.sType
+		property.Description = r.desc
+		property.Deprecated = r.deprecated
 	case arrayKind:
-		sp.Type = "array"
-		sp.Items = &swaggerv3.Propertie{}
-		sp.Description = r.desc
-		r.item.parsePropertie(sp.Items)
+		property.Type = "array"
+		property.Items = &swaggerv3.Propertie{}
+		property.Description = r.desc
+		property.Deprecated = r.deprecated
+		r.item.parsePropertie(property.Items)
 	case mapKind:
-		sp.Type = "object"
-		sp.AdditionalProperties = &swaggerv3.Propertie{}
-		r.item.parsePropertie(sp.AdditionalProperties)
+		property.Type = "object"
+		property.Deprecated = r.deprecated
+		property.AdditionalProperties = &swaggerv3.Propertie{}
+		r.item.parsePropertie(property.AdditionalProperties)
 	case objectKind:
 		if r.ref != "" {
-			sp.Ref = r.ref
-			return
-		}
-		sp.Description = r.desc
-		sp.Required = r.required
-		sp.Deprecated = r.deprecated
-		if sp.Properties == nil {
-			sp.Properties = make(map[string]*swaggerv3.Propertie)
-		}
-		for k, v := range r.items {
-			tmpSp := &swaggerv3.Propertie{}
-			v.parsePropertie(tmpSp)
-			sp.Properties[k] = tmpSp
+			property.Ref = r.ref
+		} else {
+			property.Description = r.desc
+			property.Required = r.required
+			property.Deprecated = r.deprecated
+			if property.Properties == nil {
+				property.Properties = make(map[string]*swaggerv3.Propertie)
+			}
+			for k, v := range r.items {
+				tmpSp := &swaggerv3.Propertie{}
+				v.parsePropertie(tmpSp)
+				property.Properties[k] = tmpSp
+			}
 		}
 	case interfaceKind:
-		sp.Type = "object"
+		property.Type = "object"
 		// TODO
 	}
+
+	if len(r.oneof) > 0 {
+		sp.OneOf = []*swaggerv3.Propertie{}
+		sp.OneOf = append(sp.OneOf, property)
+
+		for _, v := range r.oneof {
+			p := swaggerv3.Propertie{}
+			v.parsePropertie(&p)
+			sp.OneOf = append(sp.OneOf, &p)
+		}
+
+		return
+	}
+
+	sp.AdditionalProperties = property.AdditionalProperties
+	sp.Default = property.Default
+	sp.Deprecated = property.Deprecated
+	sp.Description = property.Description
+	sp.Example = property.Example
+	sp.Items = property.Items
+	sp.OneOf = property.OneOf
+	sp.Properties = property.Properties
+	sp.ReadOnly = property.ReadOnly
+	sp.Ref = property.Ref
+	sp.Required = property.Required
+	sp.Title = property.Title
+	sp.Type = property.Type
+
 }
 func (r *result) parseBodyParam(sp *swaggerv3.RequestBody) error {
 	if sp.Content.ApplicationJSON.Schema == nil {

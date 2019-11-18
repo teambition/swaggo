@@ -73,17 +73,43 @@ func newPackage(localName, importPath string, justGoPath bool) (p *pkg, err erro
 
 // parseSchema Parse schema in this code file
 func (p *pkg) parseSchema(s *swaggerv3.Swagger, filename, schema string, pathSchema *swaggerv3.PathSchema) (err error) {
-	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
+	schema = getSchema(schema)
+	extend := schemaExtend{}
+	if strings.Index(schema, "<") >= 0 && strings.HasSuffix(schema, ">") {
+		arr := strings.Split(schema, "<")
+		schema = arr[0]
+		template := arr[1]
+		template = strings.TrimSuffix(template, "<")
+		template = strings.TrimSuffix(template, ">")
+		template = strings.TrimSpace(template)
+		extend.template = template
+	}
+
+	if strings.Index(schema, "+") >= 0 {
+		arr := strings.Split(schema, "+")
+		for i, v := range arr {
+			v = strings.TrimSpace(v)
+			if i == 0 {
+				schema = v
+			} else {
+				extend.allof = append(extend.allof, v)
+			}
+		}
+	}
+
+	r, err := newModel(filename, ast.NewIdent(schema), p, extend).parse(s)
 	if err != nil {
 		return err
 	}
+
 	r.parsePathSchema(pathSchema)
 	return
 }
 
 // parseParam Parse param in this code file
 func (p *pkg) parseParam(s *swaggerv3.Swagger, sp *swaggerv3.Parameter, filename, schema string) (err error) {
-	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
+	schema = getSchema(schema)
+	r, err := newModel(filename, ast.NewIdent(schema), p, schemaExtend{}).parse(s)
 	if err != nil {
 		return err
 	}
@@ -92,7 +118,8 @@ func (p *pkg) parseParam(s *swaggerv3.Swagger, sp *swaggerv3.Parameter, filename
 
 // parseParam Parse param in this code file
 func (p *pkg) parseBodyParam(s *swaggerv3.Swagger, sp *swaggerv3.RequestBody, filename, schema string) (err error) {
-	r, err := newModel(filename, ast.NewIdent(schema), p).parse(s)
+	schema = getSchema(schema)
+	r, err := newModel(filename, ast.NewIdent(schema), p, schemaExtend{}).parse(s)
 	if err != nil {
 		return err
 	}
@@ -132,7 +159,9 @@ func (p *pkg) parseImports(filename string) ([]*pkg, error) {
 		}
 		importPkg, err := newPackage(localName, importPath, false)
 		if err != nil {
-			return nil, err
+			//return nil, err
+			fmt.Println(err)
+			continue
 		}
 		pkgs = append(pkgs, importPkg)
 	}
@@ -182,7 +211,9 @@ func (p *pkg) findModel(modelName string) (*model, error) {
 }
 
 func (p *pkg) findModelBySchema(filename, schema string) (model *model, err error) {
+	schema = getSchema(schema)
 	expr := strings.Split(schema, ".")
+
 	switch len(expr) {
 	case 1:
 		modelName := expr[0]

@@ -30,7 +30,8 @@ func (m *method) prettyErr(format string, e ...interface{}) error {
 
 // parse Parse the api method annotations
 func (m *method) parse(s *swaggerv3.Swagger) (err error) {
-	var routerPath, HTTPMethod string
+	var HTTPMethod string
+	var routerPathes []string = []string{}
 	tagName := m.ctrl.tagName
 	opt := swaggerv3.Operation{
 		Responses: make(map[string]*swaggerv3.Response),
@@ -45,7 +46,7 @@ func (m *method) parse(s *swaggerv3.Swagger) (err error) {
 				return m.prettyErr("should has HTTPMethod and Router information")
 			}
 			HTTPMethod = strings.ToUpper(elements[0])
-			routerPath = elements[1]
+			routerPathes = append(routerPathes, elements[1:]...)
 		case tagTrimPrefixAndSpace(&c, methodDeprecated):
 			opt.Deprecated, _ = strconv.ParseBool(c)
 		case tagTrimPrefixAndSpace(&c, methodDesc):
@@ -107,45 +108,78 @@ func (m *method) parse(s *swaggerv3.Swagger) (err error) {
 			}
 		}
 	}
-	if routerPath == "" {
+	if len(routerPathes) <= 0 {
 		return
 	}
 	m.paramCheck(&opt)
 	if s.Paths == nil {
 		s.Paths = map[string]swaggerv3.PathItem{}
 	}
-	item, ok := s.Paths[routerPath]
-	if !ok {
-		item = swaggerv3.PathItem{}
+
+	var routes = []string{}
+	for _, v := range routerPathes {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+
+		if strings.Contains(v, ",") {
+			arr := strings.Split(v, ",")
+			for _, vv := range arr {
+				vv = strings.TrimSpace(vv)
+				if vv == "" {
+					continue
+				}
+
+				routes = append(routes, vv)
+			}
+		} else {
+			routes = append(routes, v)
+		}
 	}
-	var oldOpt *swaggerv3.Operation
-	switch HTTPMethod {
-	case "GET":
-		oldOpt = item.Get
-		item.Get = &opt
-	case "POST":
-		oldOpt = item.Post
-		item.Post = &opt
-	case "PUT":
-		oldOpt = item.Put
-		item.Put = &opt
-	case "PATCH":
-		oldOpt = item.Patch
-		item.Patch = &opt
-	case "DELETE":
-		oldOpt = item.Delete
-		item.Delete = &opt
-	case "HEAD":
-		oldOpt = item.Head
-		item.Head = &opt
-	case "OPTIONS":
-		oldOpt = item.Options
-		item.Options = &opt
+
+	for k, v := range routes {
+		var optTmp = opt
+		optTmp.Deprecated = true
+
+		if k == len(routes)-1 {
+			optTmp.Deprecated = false
+		}
+
+		item, ok := s.Paths[v]
+		if !ok {
+			item = swaggerv3.PathItem{}
+		}
+		var oldOpt *swaggerv3.Operation
+		switch HTTPMethod {
+		case "GET":
+			oldOpt = item.Get
+			item.Get = &optTmp
+		case "POST":
+			oldOpt = item.Post
+			item.Post = &optTmp
+		case "PUT":
+			oldOpt = item.Put
+			item.Put = &optTmp
+		case "PATCH":
+			oldOpt = item.Patch
+			item.Patch = &optTmp
+		case "DELETE":
+			oldOpt = item.Delete
+			item.Delete = &optTmp
+		case "HEAD":
+			oldOpt = item.Head
+			item.Head = &optTmp
+		case "OPTIONS":
+			oldOpt = item.Options
+			item.Options = &optTmp
+		}
+		if oldOpt != nil {
+			log.Println("[Warning]", m.prettyErr("router(%s %s) has existed in controller(%s)", HTTPMethod, v, oldOpt.Tags[0]))
+		}
+
+		s.Paths[v] = item
 	}
-	if oldOpt != nil {
-		log.Println("[Warning]", m.prettyErr("router(%s %s) has existed in controller(%s)", HTTPMethod, routerPath, oldOpt.Tags[0]))
-	}
-	s.Paths[routerPath] = item
 
 	return
 }

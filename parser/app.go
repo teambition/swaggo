@@ -20,6 +20,7 @@ var (
 	goPaths = []string{}
 	goRoot  = ""
 	devMode bool
+	useMod  bool
 )
 
 func init() {
@@ -34,13 +35,14 @@ func init() {
 }
 
 // Parse the project by args
-func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
+func Parse(projectPath, swaggerGo, output, t string, dev bool, mod bool) (err error) {
 	absPPath, err := filepath.Abs(projectPath)
 	if err != nil {
 		return err
 	}
 	vendor = filepath.Join(absPPath, "vendor")
 	devMode = dev
+	useMod = mod
 
 	sw := swagger.NewV2()
 	if err = doc2Swagger(projectPath, swaggerGo, dev, sw); err != nil {
@@ -54,7 +56,7 @@ func Parse(projectPath, swaggerGo, output, t string, dev bool) (err error) {
 	switch t {
 	case "json":
 		filename = jsonFile
-		data, err = json.Marshal(sw)
+		data, err = json.MarshalIndent(sw, "", "    ")
 	case "yaml":
 		filename = yamlFile
 		data, err = yaml.Marshal(sw)

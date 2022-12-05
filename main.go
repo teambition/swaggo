@@ -43,13 +43,19 @@ func main() {
 			Value: "json",
 			Usage: "the type of swagger file (json or yaml)",
 		},
+		cli.BoolFlag{
+			Name:  "mod, m",
+			Usage: "whether use the mod ",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		if err := parser.Parse(c.String("project"),
 			c.String("swagger"),
 			c.String("output"),
 			c.String("type"),
-			c.Bool("dev")); err != nil {
+			c.Bool("dev"),
+			c.Bool("mod"),
+		); err != nil {
 			return err
 		}
 		return nil

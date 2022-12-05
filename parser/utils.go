@@ -2,6 +2,7 @@ package parser
 
 import (
 	"go/ast"
+	"golang.org/x/tools/go/packages"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -36,6 +37,20 @@ func str2RealType(s string, typ string) (ret interface{}, err error) {
 }
 
 func absPathFromGoPath(importPath string) (string, bool) {
+	if useMod {
+		//modPath, err := module.EscapePath(importPath)
+		x1, err := packages.Load(&packages.Config{
+			Mode: packages.LoadFiles,
+		}, importPath)
+		if err != nil {
+
+		}
+		realPath := x1[0].GoFiles[0]
+		x2 := strings.Split(realPath, "/")
+		x2 = x2[0 : len(x2)-1]
+		return strings.Join(x2, "/"), true
+		//return importPath, true
+	}
 	if vendor != "" {
 		vendorImport := filepath.Join(vendor, importPath)
 		if fileExists(vendorImport) {
